@@ -1,0 +1,52 @@
+services:
+
+  postgres:
+    image: postgres:16
+
+    container_name: projectpulse-db
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: projectpulse
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+
+    container_name: projectpulse-api
+
+    ports:
+      - "4000:4000"
+
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+    depends_on:
+      - postgres
+
+  frontend:
+    build:
+      context: ./frontend
+
+    container_name: projectpulse-web
+
+    ports:
+      - "5173:5173"
+
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
