@@ -7,10 +7,10 @@ import { expressMiddleware }
 import { app } from "./app";
 
 import { typeDefs }
-  from "./graphql/typeDefs";
+  from "./src/graphql/typeDefs";
 
 import { resolvers }
-  from "./graphql/resolvers";
+  from "./src/graphql/resolvers";
 
 async function startServer() {
   const apolloServer =
