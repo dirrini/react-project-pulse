@@ -1,52 +1,70 @@
+import StatusBadge from "./StatusBadge";
+
+import type { ProjectStatus }
+  from "../../types/Project";
+
 interface ProjectCardProps {
   name: string;
   description: string;
   progress: number;
+  status: ProjectStatus;
 }
 
 export default function ProjectCard({
   name,
   description,
-  progress
+  progress,
+  status
 }: ProjectCardProps) {
   return (
     <div
       className="
         bg-white
         rounded-xl
+        border
         shadow-sm
         p-5
-        border
         hover:shadow-md
-        transition
+        transition-shadow
       "
     >
-      <h3
+      <div
         className="
-          text-lg
-          font-semibold
-          mb-2
+          flex
+          justify-between
+          items-start
+          mb-3
         "
       >
-        {name}
-      </h3>
+        <h3
+          className="
+            text-lg
+            font-semibold
+          "
+        >
+          {name}
+        </h3>
+
+        <StatusBadge status={status} />
+      </div>
 
       <p
         className="
           text-slate-600
           text-sm
-          mb-4
+          mb-5
         "
       >
         {description}
       </p>
 
-      <div className="space-y-2">
+      <div>
         <div
           className="
             flex
             justify-between
             text-sm
+            mb-2
           "
         >
           <span>Progress</span>
@@ -56,18 +74,25 @@ export default function ProjectCard({
         <div
           className="
             w-full
+            h-2
             bg-slate-200
             rounded-full
-            h-2
+            overflow-hidden
           "
         >
           <div
-            className="
-              bg-blue-600
-              h-2
+            className={`
+              h-full
               rounded-full
               transition-all
-            "
+              ${
+                status === "COMPLETED"
+                  ? "bg-blue-600"
+                  : status === "AT_RISK"
+                  ? "bg-yellow-500"
+                  : "bg-green-600"
+              }
+            `}
             style={{
               width: `${progress}%`
             }}

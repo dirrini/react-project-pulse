@@ -112,12 +112,9 @@ export default function Dashboard() {
             <ProjectCard
               key={project.id}
               name={project.name}
-              description={
-                project.description
-              }
-              progress={
-                project.progress
-              }
+              description={project.description}
+              progress={project.progress}
+              status={project.status}
             />
           )
         )}

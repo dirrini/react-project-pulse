@@ -7,6 +7,7 @@ export const PROJECTS_QUERY = gql`
       name
       description
       progress
+      status
     }
   }
 `;
