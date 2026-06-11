@@ -1,4 +1,4 @@
-export const typeDefs = `#graphql
+export const projectSchema = `#graphql
 
   type Project {
     id: ID!

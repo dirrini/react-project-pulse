@@ -1,8 +1,5 @@
-export const resolvers = {
+export const projectResolver = {
   Query: {
-    health: () =>
-      "ProjectPulse API is running 🚀",
-
     projects: () => [
       {
         id: "1",

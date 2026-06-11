@@ -1,16 +1,9 @@
-import { ApolloServer }
-  from "@apollo/server";
-
-import { expressMiddleware }
-  from "@apollo/server/express4";
+import { ApolloServer } from "@apollo/server";
+import { expressMiddleware } from "@apollo/server/express4";
 
 import { app } from "./app";
-
-import { typeDefs }
-  from "./src/graphql/typeDefs";
-
-import { resolvers }
-  from "./src/graphql/resolvers";
+import { typeDefs } from "./graphql/schemas";
+import { resolvers } from "./graphql/resolvers";
 
 async function startServer() {
   const apolloServer =

@@ -1,11 +1,13 @@
 import { useQuery } from "@apollo/client/react";
 
 import { PROJECTS_QUERY } from "../graphql/queries/projects";
+import { DASHBOARD_STATS_QUERY } from "../graphql/queries/dashboard";
 
 import ProjectCard from "../components/projects/ProjectCard";
 import StatsCard from "../components/dashboard/StatsCard";
 
 import type { Project } from "../types/Project";
+import type { DashboardStats } from "../types/DashboardStats";
 
 type ProjectsQueryData = {
   projects: Project[];
@@ -16,9 +18,16 @@ export default function Dashboard() {
     useQuery<ProjectsQueryData>(
       PROJECTS_QUERY
     );
-
   const projectCount =
     data?.projects.length ?? 0;
+
+  type DashboardStatsQueryData = {
+    dashboardStats: DashboardStats;
+  };
+  const { data: statsData } =
+    useQuery<DashboardStatsQueryData>(
+      DASHBOARD_STATS_QUERY
+    );
 
   return (
     <div>
@@ -44,26 +53,34 @@ export default function Dashboard() {
       >
         <StatsCard
           title="Projects"
-          value={projectCount}
-          subtitle="Active projects"
+          value={
+            statsData?.dashboardStats
+              .totalProjects ?? 0
+          }
         />
 
         <StatsCard
           title="Tasks"
-          value="84"
-          subtitle="Across all projects"
+          value={
+            statsData?.dashboardStats
+              .totalTasks ?? 0
+          }
         />
 
         <StatsCard
           title="Completed"
-          value="61"
-          subtitle="Finished tasks"
+          value={
+            statsData?.dashboardStats
+              .completedTasks ?? 0
+          }
         />
 
         <StatsCard
           title="Team"
-          value="8"
-          subtitle="Members"
+          value={
+            statsData?.dashboardStats
+              .teamMembers ?? 0
+          }
         />
       </div>
 
