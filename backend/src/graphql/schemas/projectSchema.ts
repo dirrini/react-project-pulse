@@ -18,4 +18,17 @@ export const projectSchema = `#graphql
     projects: [Project!]!
   }
 
+  input CreateProjectInput {
+    name: String!
+    description: String!
+    progress: Int!
+    status: String!
+  }
+
+  type Mutation {
+    createProject(
+      input: CreateProjectInput!
+    ): Project!
+  }
+
 `;

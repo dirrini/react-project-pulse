@@ -11,3 +11,15 @@ export const PROJECTS_QUERY = gql`
     }
   }
 `;
+
+export const CREATE_PROJECT_MUTATION = gql`
+  mutation CreateProject($input: CreateProjectInput!) {
+    createProject(input: $input) {
+      id
+      name
+      description
+      progress
+      status
+    }
+  }
+`;

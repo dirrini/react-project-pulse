@@ -8,5 +8,9 @@ export const resolvers = {
 
     health: () =>
       "ProjectPulse API is running 🚀"
+  },
+
+  Mutation: {
+    ...projectResolver.Mutation
   }
 };
