@@ -1,5 +1,6 @@
 import type { Request } from "express";
 import type { User } from "@prisma/client";
+import { GraphQLError } from "graphql";
 
 import { verifyAuthToken }
   from "../lib/auth";
@@ -8,6 +9,23 @@ import { prisma } from "../lib/prisma";
 export type GraphQLContext = {
   currentUser: User | null;
 };
+
+export function requireAuth(
+  context: GraphQLContext
+) {
+  if (!context.currentUser) {
+    throw new GraphQLError(
+      "Authentication required.",
+      {
+        extensions: {
+          code: "UNAUTHENTICATED"
+        }
+      }
+    );
+  }
+
+  return context.currentUser;
+}
 
 function getTokenFromRequest(req: Request) {
   const authorization =
