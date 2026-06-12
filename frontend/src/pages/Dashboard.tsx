@@ -16,7 +16,10 @@ type ProjectsQueryData = {
 export default function Dashboard() {
   const { data, loading } =
     useQuery<ProjectsQueryData>(
-      PROJECTS_QUERY
+      PROJECTS_QUERY,
+      {
+        fetchPolicy: "cache-and-network"
+      }
     );
   const projectCount =
     data?.projects.length ?? 0;
@@ -26,7 +29,10 @@ export default function Dashboard() {
   };
   const { data: statsData } =
     useQuery<DashboardStatsQueryData>(
-      DASHBOARD_STATS_QUERY
+      DASHBOARD_STATS_QUERY,
+      {
+        fetchPolicy: "cache-and-network"
+      }
     );
 
   return (

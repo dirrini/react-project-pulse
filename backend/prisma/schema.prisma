@@ -6,3 +6,12 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+model Project {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String
+  progress    Int
+  status      String
+  createdAt   DateTime @default(now())
+}
