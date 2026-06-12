@@ -4,11 +4,17 @@ import {
   createAuthToken,
   verifyPassword
 } from "../../lib/auth";
+import type { GraphQLContext }
+  from "../context";
 import { prisma } from "../../lib/prisma";
 
 export const authResolver = {
   Query: {
-    me: () => null
+    me: (
+      _: unknown,
+      __: unknown,
+      context: GraphQLContext
+    ) => context.currentUser
   },
 
   Mutation: {

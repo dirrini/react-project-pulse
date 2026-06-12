@@ -4,10 +4,14 @@ import { expressMiddleware } from "@apollo/server/express4";
 import { app } from "./app";
 import { typeDefs } from "./graphql/schemas";
 import { resolvers } from "./graphql/resolvers";
+import {
+  createGraphQLContext,
+  type GraphQLContext
+} from "./graphql/context";
 
 async function startServer() {
   const apolloServer =
-    new ApolloServer({
+    new ApolloServer<GraphQLContext>({
       typeDefs,
       resolvers
     });
@@ -16,7 +20,10 @@ async function startServer() {
 
   app.use(
     "/graphql",
-    expressMiddleware(apolloServer)
+    expressMiddleware(apolloServer, {
+      context: async ({ req }) =>
+        createGraphQLContext(req)
+    })
   );
 
   app.listen(4000, () => {
