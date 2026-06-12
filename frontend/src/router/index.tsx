@@ -4,6 +4,7 @@ import {
 
 import Dashboard from "../pages/Dashboard";
 import Projects from "../pages/Projects";
+import ProjectDetails from "../pages/ProjectDetails";
 import AppLayout from "../components/layout/AppLayout";
 
 export const router =
@@ -20,6 +21,10 @@ export const router =
         {
           path: "projects",
           element: <Projects />
+        },
+        {
+          path: "projects/:id",
+          element: <ProjectDetails />
         }
       ]
     }

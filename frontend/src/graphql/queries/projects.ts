@@ -12,6 +12,25 @@ export const PROJECTS_QUERY = gql`
   }
 `;
 
+export const PROJECT_QUERY = gql`
+  query Project($id: ID!) {
+    project(id: $id) {
+      id
+      name
+      description
+      progress
+      status
+      tasks {
+        id
+        title
+        description
+        status
+        projectId
+      }
+    }
+  }
+`;
+
 export const CREATE_PROJECT_MUTATION = gql`
   mutation CreateProject($input: CreateProjectInput!) {
     createProject(input: $input) {
@@ -20,6 +39,37 @@ export const CREATE_PROJECT_MUTATION = gql`
       description
       progress
       status
+    }
+  }
+`;
+
+export const UPDATE_PROJECT_MUTATION = gql`
+  mutation UpdateProject($id: ID!, $input: UpdateProjectInput!) {
+    updateProject(id: $id, input: $input) {
+      id
+      name
+      description
+      progress
+      status
+      tasks {
+        id
+        title
+        description
+        status
+        projectId
+      }
+    }
+  }
+`;
+
+export const CREATE_TASK_MUTATION = gql`
+  mutation CreateTask($input: CreateTaskInput!) {
+    createTask(input: $input) {
+      id
+      title
+      description
+      status
+      projectId
     }
   }
 `;

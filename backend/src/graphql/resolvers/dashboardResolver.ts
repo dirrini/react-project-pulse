@@ -1,10 +1,28 @@
+import { prisma } from "../../lib/prisma";
+
 export const dashboardResolver = {
   Query: {
-    dashboardStats: () => ({
-      totalProjects: 3,
-      totalTasks: 84,
-      completedTasks: 61,
-      teamMembers: 8
-    })
+    dashboardStats: async () => {
+      const [
+        totalProjects,
+        totalTasks,
+        completedTasks
+      ] = await Promise.all([
+        prisma.project.count(),
+        prisma.task.count(),
+        prisma.task.count({
+          where: {
+            status: "DONE"
+          }
+        })
+      ]);
+
+      return {
+        totalProjects,
+        totalTasks,
+        completedTasks,
+        teamMembers: 0
+      };
+    }
   }
 };

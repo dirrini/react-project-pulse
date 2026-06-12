@@ -1,9 +1,12 @@
+import { Link } from "react-router-dom";
+
 import StatusBadge from "./StatusBadge";
 
 import type { ProjectStatus }
   from "../../types/Project";
 
 interface ProjectCardProps {
+  id: string;
   name: string;
   description: string;
   progress: number;
@@ -11,14 +14,17 @@ interface ProjectCardProps {
 }
 
 export default function ProjectCard({
+  id,
   name,
   description,
   progress,
   status
 }: ProjectCardProps) {
   return (
-    <div
+    <Link
+      to={`/projects/${id}`}
       className="
+        block
         bg-white
         rounded-xl
         border
@@ -99,6 +105,6 @@ export default function ProjectCard({
           />
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

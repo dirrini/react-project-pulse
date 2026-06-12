@@ -241,6 +241,7 @@ export default function Projects() {
           (project) => (
             <ProjectCard
               key={project.id}
+              id={project.id}
               name={project.name}
               description={
                 project.description

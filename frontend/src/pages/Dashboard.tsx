@@ -117,6 +117,7 @@ export default function Dashboard() {
           (project) => (
             <ProjectCard
               key={project.id}
+              id={project.id}
               name={project.name}
               description={project.description}
               progress={project.progress}
