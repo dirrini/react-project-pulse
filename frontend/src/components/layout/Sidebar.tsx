@@ -1,16 +1,69 @@
+import { useQuery } from "@apollo/client/react";
 import { Link } from "react-router-dom";
 
-export default function Sidebar() {
+import { ME_QUERY }
+  from "../../graphql/queries/auth";
+
+type MeQueryData = {
+  me: {
+    role: string;
+  } | null;
+};
+
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export default function Sidebar({
+  isOpen,
+  onClose
+}: SidebarProps) {
+  const { data } =
+    useQuery<MeQueryData>(ME_QUERY);
+  const isAdmin =
+    data?.me?.role === "ADMIN";
+
   return (
-    <aside
-      className="
-        w-64
-        bg-slate-900
-        text-white
-        flex
-        flex-col
-      "
-    >
+    <>
+      {isOpen && (
+        <button
+          type="button"
+          aria-label="Close navigation"
+          onClick={onClose}
+          className="
+            fixed
+            inset-0
+            z-40
+            bg-slate-950/40
+            lg:hidden
+          "
+        />
+      )}
+
+      <aside
+        className={`
+          fixed
+          inset-y-0
+          left-0
+          z-50
+          w-64
+          bg-slate-900
+          text-white
+          flex
+          flex-col
+          transform
+          transition-transform
+          duration-200
+          lg:static
+          lg:translate-x-0
+          ${
+            isOpen
+              ? "translate-x-0"
+              : "-translate-x-full"
+          }
+        `}
+      >
       <div
         className="
           px-6
@@ -27,6 +80,25 @@ export default function Sidebar() {
         >
           ProjectPulse
         </h1>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="
+            mt-4
+            rounded-lg
+            border
+            border-slate-700
+            px-3
+            py-2
+            text-sm
+            text-slate-300
+            hover:bg-slate-800
+            lg:hidden
+          "
+        >
+          Close
+        </button>
       </div>
 
       <nav
@@ -39,6 +111,7 @@ export default function Sidebar() {
           <li>
             <Link
               to="/"
+              onClick={onClose}
               className="
                 block
                 px-4
@@ -54,6 +127,7 @@ export default function Sidebar() {
           <li>
             <Link
               to="/projects"
+              onClick={onClose}
               className="
                 block
                 px-4
@@ -66,22 +140,26 @@ export default function Sidebar() {
             </Link>
           </li>
 
-          <li>
-            <Link
-              to="/users"
-              className="
-                block
-                px-4
-                py-2
-                rounded-lg
-                hover:bg-slate-800
-              "
-            >
-              Users
-            </Link>
-          </li>
+          {isAdmin && (
+            <li>
+              <Link
+                to="/users"
+                onClick={onClose}
+                className="
+                  block
+                  px-4
+                  py-2
+                  rounded-lg
+                  hover:bg-slate-800
+                "
+              >
+                Users
+              </Link>
+            </li>
+          )}
         </ul>
       </nav>
     </aside>
+    </>
   );
 }
