@@ -65,6 +65,21 @@ export default function Sidebar() {
               Projects
             </Link>
           </li>
+
+          <li>
+            <Link
+              to="/users"
+              className="
+                block
+                px-4
+                py-2
+                rounded-lg
+                hover:bg-slate-800
+              "
+            >
+              Users
+            </Link>
+          </li>
         </ul>
       </nav>
     </aside>

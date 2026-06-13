@@ -24,3 +24,25 @@ export const ME_QUERY = gql`
     }
   }
 `;
+
+export const USERS_QUERY = gql`
+  query Users {
+    users {
+      id
+      name
+      email
+      role
+    }
+  }
+`;
+
+export const CREATE_USER_MUTATION = gql`
+  mutation CreateUser($input: CreateUserInput!) {
+    createUser(input: $input) {
+      id
+      name
+      email
+      role
+    }
+  }
+`;

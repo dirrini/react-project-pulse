@@ -27,6 +27,26 @@ export function requireAuth(
   return context.currentUser;
 }
 
+export function requireAdmin(
+  context: GraphQLContext
+) {
+  const currentUser =
+    requireAuth(context);
+
+  if (currentUser.role !== "ADMIN") {
+    throw new GraphQLError(
+      "Admin access required.",
+      {
+        extensions: {
+          code: "FORBIDDEN"
+        }
+      }
+    );
+  }
+
+  return currentUser;
+}
+
 function getTokenFromRequest(req: Request) {
   const authorization =
     req.headers.authorization;

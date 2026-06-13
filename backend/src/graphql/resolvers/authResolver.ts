@@ -2,10 +2,13 @@ import { GraphQLError } from "graphql";
 
 import {
   createAuthToken,
+  hashPassword,
   verifyPassword
 } from "../../lib/auth";
-import type { GraphQLContext }
-  from "../context";
+import {
+  requireAdmin,
+  type GraphQLContext
+} from "../context";
 import { prisma } from "../../lib/prisma";
 
 export const authResolver = {
@@ -14,7 +17,21 @@ export const authResolver = {
       _: unknown,
       __: unknown,
       context: GraphQLContext
-    ) => context.currentUser
+    ) => context.currentUser,
+
+    users: async (
+      _: unknown,
+      __: unknown,
+      context: GraphQLContext
+    ) => {
+      requireAdmin(context);
+
+      return prisma.user.findMany({
+        orderBy: {
+          createdAt: "desc"
+        }
+      });
+    }
   },
 
   Mutation: {
@@ -56,6 +73,53 @@ export const authResolver = {
         }),
         user
       };
+    },
+    createUser: async (
+      _: unknown,
+      args: {
+        input: {
+          name: string;
+          email: string;
+          password: string;
+          role: string;
+        };
+      },
+      context: GraphQLContext
+    ) => {
+      requireAdmin(context);
+
+      const email =
+        args.input.email
+          .trim()
+          .toLowerCase();
+      const existingUser =
+        await prisma.user.findUnique({
+          where: {
+            email
+          }
+        });
+
+      if (existingUser) {
+        throw new GraphQLError(
+          "A user with this email already exists.",
+          {
+            extensions: {
+              code: "BAD_USER_INPUT"
+            }
+          }
+        );
+      }
+
+      return prisma.user.create({
+        data: {
+          name: args.input.name.trim(),
+          email,
+          passwordHash: hashPassword(
+            args.input.password
+          ),
+          role: args.input.role
+        }
+      });
     }
   }
 };
