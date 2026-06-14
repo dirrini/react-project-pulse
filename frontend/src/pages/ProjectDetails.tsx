@@ -18,13 +18,17 @@ import CreateTaskDialog, {
 import StatusBadge from "../components/projects/StatusBadge";
 
 import {
+  ADD_PROJECT_USER_MUTATION,
   CREATE_TASK_MUTATION,
   PROJECT_QUERY,
   PROJECTS_QUERY,
+  REMOVE_PROJECT_USER_MUTATION,
   UPDATE_PROJECT_MUTATION
 } from "../graphql/queries/projects";
-import { ME_QUERY }
-  from "../graphql/queries/auth";
+import {
+  ME_QUERY,
+  USERS_QUERY
+} from "../graphql/queries/auth";
 
 import type {
   Project,
@@ -32,6 +36,8 @@ import type {
   Task,
   TaskStatus
 } from "../types/Project";
+import type { User }
+  from "../types/User";
 
 type ProjectQueryData = {
   project: Project | null;
@@ -41,6 +47,10 @@ type MeQueryData = {
   me: {
     role: string;
   } | null;
+};
+
+type UsersQueryData = {
+  users: User[];
 };
 
 type ProjectFormState = {
@@ -84,6 +94,10 @@ export default function ProjectDetails() {
   const { id } = useParams();
   const [isTaskDialogOpen, setIsTaskDialogOpen] =
     useState(false);
+  const [
+    selectedUserId,
+    setSelectedUserId
+  ] = useState("");
   const [projectForm, setProjectForm] =
     useState<ProjectFormState>(
       emptyProjectForm
@@ -109,6 +123,11 @@ export default function ProjectDetails() {
     meData?.me?.role === "ADMIN" ||
     meData?.me?.role ===
       "PROJECT_MANAGER";
+  const { data: usersData } =
+    useQuery<UsersQueryData>(USERS_QUERY, {
+      skip: !canManageProjects,
+      fetchPolicy: "cache-and-network"
+    });
 
   const [
     updateProject,
@@ -137,6 +156,40 @@ export default function ProjectDetails() {
     }
   ] = useMutation(
     CREATE_TASK_MUTATION,
+    {
+      refetchQueries: [
+        {
+          query: PROJECT_QUERY,
+          variables: { id }
+        }
+      ]
+    }
+  );
+  const [
+    addProjectUser,
+    {
+      loading: addingUser,
+      error: addUserError
+    }
+  ] = useMutation(
+    ADD_PROJECT_USER_MUTATION,
+    {
+      refetchQueries: [
+        {
+          query: PROJECT_QUERY,
+          variables: { id }
+        }
+      ]
+    }
+  );
+  const [
+    removeProjectUser,
+    {
+      loading: removingUser,
+      error: removeUserError
+    }
+  ] = useMutation(
+    REMOVE_PROJECT_USER_MUTATION,
     {
       refetchQueries: [
         {
@@ -201,6 +254,38 @@ export default function ProjectDetails() {
     setIsTaskDialogOpen(false);
   };
 
+  const handleAddProjectUser = async () => {
+    if (!selectedUserId || !id)
+      return;
+
+    await addProjectUser({
+      variables: {
+        input: {
+          projectId: id,
+          userId: selectedUserId
+        }
+      }
+    });
+
+    setSelectedUserId("");
+  };
+
+  const handleRemoveProjectUser = async (
+    userId: string
+  ) => {
+    if (!id)
+      return;
+
+    await removeProjectUser({
+      variables: {
+        input: {
+          projectId: id,
+          userId
+        }
+      }
+    });
+  };
+
   if (loading && !data?.project) {
     return <p>Loading project...</p>;
   }
@@ -238,6 +323,23 @@ export default function ProjectDetails() {
 
   const project = data.project;
   const tasks = project.tasks ?? [];
+  const projectUsers = project.users ?? [];
+  const projectManagers =
+    projectUsers.filter(
+      (user) =>
+        user.role === "PROJECT_MANAGER"
+    );
+  const members = projectUsers.filter(
+    (user) => user.role === "MEMBER"
+  );
+  const assignableUsers =
+    usersData?.users.filter(
+      (user) =>
+        !projectUsers.some(
+          (projectUser) =>
+            projectUser.id === user.id
+        )
+    ) ?? [];
 
   return (
     <div>
@@ -557,6 +659,265 @@ export default function ProjectDetails() {
         )}
 
         <section>
+          <div
+            className="
+              mb-6
+              rounded-xl
+              border
+              bg-white
+              p-5
+              shadow-sm
+            "
+          >
+            <div
+              className="
+                mb-4
+                flex
+                flex-col
+                gap-3
+                sm:flex-row
+                sm:items-center
+                sm:justify-between
+              "
+            >
+              <h3
+                className="
+                  text-lg
+                  font-semibold
+                "
+              >
+                Project users
+              </h3>
+
+              {canManageProjects && (
+                <div
+                  className="
+                    flex
+                    flex-col
+                    gap-2
+                    sm:flex-row
+                  "
+                >
+                  <select
+                    value={selectedUserId}
+                    onChange={(event) =>
+                      setSelectedUserId(
+                        event.target.value
+                      )
+                    }
+                    className="
+                      rounded-lg
+                      border
+                      border-slate-300
+                      px-3
+                      py-2
+                      text-sm
+                      outline-none
+                      focus:border-slate-900
+                    "
+                  >
+                    <option value="">
+                      Select user
+                    </option>
+
+                    {assignableUsers.map(
+                      (user) => (
+                        <option
+                          key={user.id}
+                          value={user.id}
+                        >
+                          {user.name} ({formatStatus(user.role)})
+                        </option>
+                      )
+                    )}
+                  </select>
+
+                  <button
+                    type="button"
+                    onClick={handleAddProjectUser}
+                    disabled={
+                      !selectedUserId ||
+                      addingUser
+                    }
+                    className="
+                      rounded-lg
+                      bg-slate-900
+                      px-4
+                      py-2
+                      text-sm
+                      font-medium
+                      text-white
+                      transition
+                      hover:bg-slate-700
+                      disabled:cursor-not-allowed
+                      disabled:opacity-60
+                    "
+                  >
+                    {addingUser
+                      ? "Adding..."
+                      : "Add user"}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {(addUserError ||
+              removeUserError) && (
+              <p className="mb-4 text-sm text-red-600">
+                Could not update project users.
+              </p>
+            )}
+
+            <div
+              className="
+                grid
+                grid-cols-1
+                gap-4
+                lg:grid-cols-2
+              "
+            >
+              <div>
+                <h4
+                  className="
+                    mb-3
+                    text-sm
+                    font-semibold
+                    text-slate-700
+                  "
+                >
+                  Project Managers
+                </h4>
+
+                {projectManagers.length === 0 ? (
+                  <p className="text-sm text-slate-500">
+                    No project managers assigned.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {projectManagers.map(
+                      (user) => (
+                        <div
+                          key={user.id}
+                          className="
+                            flex
+                            items-center
+                            justify-between
+                            gap-3
+                            rounded-lg
+                            border
+                            p-3
+                          "
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium">
+                              {user.name}
+                            </p>
+                            <p className="truncate text-xs text-slate-500">
+                              {user.email}
+                            </p>
+                          </div>
+
+                          {canManageProjects && (
+                            <button
+                              type="button"
+                              disabled={removingUser}
+                              onClick={() =>
+                                handleRemoveProjectUser(
+                                  user.id
+                                )
+                              }
+                              className="
+                                rounded-lg
+                                border
+                                px-3
+                                py-1
+                                text-sm
+                                hover:bg-slate-100
+                                disabled:cursor-not-allowed
+                                disabled:opacity-60
+                              "
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                      )
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h4
+                  className="
+                    mb-3
+                    text-sm
+                    font-semibold
+                    text-slate-700
+                  "
+                >
+                  Members
+                </h4>
+
+                {members.length === 0 ? (
+                  <p className="text-sm text-slate-500">
+                    No members assigned.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {members.map((user) => (
+                      <div
+                        key={user.id}
+                        className="
+                          flex
+                          items-center
+                          justify-between
+                          gap-3
+                          rounded-lg
+                          border
+                          p-3
+                        "
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">
+                            {user.name}
+                          </p>
+                          <p className="truncate text-xs text-slate-500">
+                            {user.email}
+                          </p>
+                        </div>
+
+                        {canManageProjects && (
+                          <button
+                            type="button"
+                            disabled={removingUser}
+                            onClick={() =>
+                              handleRemoveProjectUser(
+                                user.id
+                              )
+                            }
+                            className="
+                              rounded-lg
+                              border
+                              px-3
+                              py-1
+                              text-sm
+                              hover:bg-slate-100
+                              disabled:cursor-not-allowed
+                              disabled:opacity-60
+                            "
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div
             className="
               mb-4

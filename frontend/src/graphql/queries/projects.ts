@@ -27,6 +27,12 @@ export const PROJECT_QUERY = gql`
         status
         projectId
       }
+      users {
+        id
+        name
+        email
+        role
+      }
     }
   }
 `;
@@ -58,6 +64,12 @@ export const UPDATE_PROJECT_MUTATION = gql`
         status
         projectId
       }
+      users {
+        id
+        name
+        email
+        role
+      }
     }
   }
 `;
@@ -70,6 +82,34 @@ export const CREATE_TASK_MUTATION = gql`
       description
       status
       projectId
+    }
+  }
+`;
+
+export const ADD_PROJECT_USER_MUTATION = gql`
+  mutation AddProjectUser($input: AddProjectUserInput!) {
+    addProjectUser(input: $input) {
+      id
+      users {
+        id
+        name
+        email
+        role
+      }
+    }
+  }
+`;
+
+export const REMOVE_PROJECT_USER_MUTATION = gql`
+  mutation RemoveProjectUser($input: RemoveProjectUserInput!) {
+    removeProjectUser(input: $input) {
+      id
+      users {
+        id
+        name
+        email
+        role
+      }
     }
   }
 `;

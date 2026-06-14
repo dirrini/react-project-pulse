@@ -15,6 +15,7 @@ model Project {
   status      String
   createdAt   DateTime @default(now())
   tasks       Task[]
+  users       ProjectUser[]
 }
 
 model Task {
@@ -34,4 +35,16 @@ model User {
   passwordHash String
   role         String
   createdAt    DateTime @default(now())
+  projects     ProjectUser[]
+}
+
+model ProjectUser {
+  id        Int      @id @default(autoincrement())
+  projectId Int
+  userId    Int
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([projectId, userId])
 }

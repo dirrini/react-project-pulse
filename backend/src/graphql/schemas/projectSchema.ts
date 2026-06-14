@@ -27,6 +27,7 @@ export const projectSchema = `#graphql
     progress: Int!
     status: ProjectStatus!
     tasks: [Task!]!
+    users: [User!]!
   }
 
   extend type Query {
@@ -55,6 +56,16 @@ export const projectSchema = `#graphql
     status: String!
   }
 
+  input AddProjectUserInput {
+    projectId: ID!
+    userId: ID!
+  }
+
+  input RemoveProjectUserInput {
+    projectId: ID!
+    userId: ID!
+  }
+
   type Mutation {
     createProject(
       input: CreateProjectInput!
@@ -68,6 +79,14 @@ export const projectSchema = `#graphql
     createTask(
       input: CreateTaskInput!
     ): Task!
+
+    addProjectUser(
+      input: AddProjectUserInput!
+    ): Project!
+
+    removeProjectUser(
+      input: RemoveProjectUserInput!
+    ): Project!
   }
 
 `;

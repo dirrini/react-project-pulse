@@ -1,3 +1,6 @@
+import type { User }
+  from "./User";
+
 export type ProjectStatus =
   | "ON_TRACK"
   | "AT_RISK"
@@ -23,4 +26,5 @@ export interface Project {
   progress: number;
   status: ProjectStatus;
   tasks?: Task[];
+  users?: User[];
 }
