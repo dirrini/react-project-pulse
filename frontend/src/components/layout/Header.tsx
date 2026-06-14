@@ -1,9 +1,11 @@
 import {
   useMemo,
-  useState
+  useState,
+  type FormEvent
 } from "react";
 import {
   useApolloClient,
+  useMutation,
   useQuery
 } from "@apollo/client/react";
 import {
@@ -15,8 +17,10 @@ import {
   useNavigate
 } from "react-router-dom";
 
-import { ME_QUERY }
-  from "../../graphql/queries/auth";
+import {
+  ME_QUERY,
+  UPDATE_MY_PASSWORD_MUTATION
+} from "../../graphql/queries/auth";
 import { clearAuthToken }
   from "../../lib/authStorage";
 
@@ -42,8 +46,37 @@ export default function Header({
     isProfileOpen,
     setIsProfileOpen
   ] = useState(false);
+  const [
+    isPasswordOpen,
+    setIsPasswordOpen
+  ] = useState(false);
+  const [
+    currentPassword,
+    setCurrentPassword
+  ] = useState("");
+  const [
+    newPassword,
+    setNewPassword
+  ] = useState("");
+  const [
+    confirmPassword,
+    setConfirmPassword
+  ] = useState("");
+  const [
+    passwordMessage,
+    setPasswordMessage
+  ] = useState<string | null>(null);
   const { data } =
     useQuery<MeQueryData>(ME_QUERY);
+  const [
+    updateMyPassword,
+    {
+      loading: updatingPassword,
+      error: passwordError
+    }
+  ] = useMutation(
+    UPDATE_MY_PASSWORD_MUTATION
+  );
   const currentUser = data?.me;
   const userInitials = useMemo(() => {
     if (!currentUser?.name) {
@@ -94,6 +127,46 @@ export default function Header({
   const handleProfileToggle = () => {
     setIsProfileOpen(
       (isOpen) => !isOpen
+    );
+  };
+
+  const resetPasswordForm = () => {
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setPasswordMessage(null);
+  };
+
+  const handlePasswordSubmit = async (
+    event: FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
+    setPasswordMessage(null);
+
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage(
+        "New passwords do not match."
+      );
+      return;
+    }
+
+    try {
+      await updateMyPassword({
+        variables: {
+          input: {
+            currentPassword,
+            newPassword
+          }
+        }
+      });
+    } catch {
+      return;
+    }
+
+    resetPasswordForm();
+    setIsPasswordOpen(false);
+    setPasswordMessage(
+      "Password updated."
     );
   };
 
@@ -301,6 +374,175 @@ export default function Header({
                 {currentUser?.role ?? "USER"}
               </span>
             </div>
+
+            <div
+              className="
+                mt-4
+                border-t
+                pt-4
+              "
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setIsPasswordOpen(
+                    (isOpen) => !isOpen
+                  );
+                  setPasswordMessage(null);
+                }}
+                className="
+                  w-full
+                  rounded-lg
+                  border
+                  px-4
+                  py-2
+                  text-sm
+                  font-medium
+                  text-slate-700
+                  transition
+                  hover:bg-slate-100
+                "
+              >
+                Change password
+              </button>
+
+              {isPasswordOpen && (
+                <form
+                  onSubmit={handlePasswordSubmit}
+                  className="mt-3 space-y-3"
+                >
+                  <input
+                    required
+                    type="password"
+                    value={currentPassword}
+                    onChange={(event) =>
+                      setCurrentPassword(
+                        event.target.value
+                      )
+                    }
+                    placeholder="Current password"
+                    className="
+                      w-full
+                      rounded-lg
+                      border
+                      border-slate-300
+                      px-3
+                      py-2
+                      text-sm
+                      outline-none
+                      focus:border-slate-900
+                    "
+                  />
+
+                  <input
+                    required
+                    minLength={6}
+                    type="password"
+                    value={newPassword}
+                    onChange={(event) =>
+                      setNewPassword(
+                        event.target.value
+                      )
+                    }
+                    placeholder="New password"
+                    className="
+                      w-full
+                      rounded-lg
+                      border
+                      border-slate-300
+                      px-3
+                      py-2
+                      text-sm
+                      outline-none
+                      focus:border-slate-900
+                    "
+                  />
+
+                  <input
+                    required
+                    minLength={6}
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(event) =>
+                      setConfirmPassword(
+                        event.target.value
+                      )
+                    }
+                    placeholder="Confirm new password"
+                    className="
+                      w-full
+                      rounded-lg
+                      border
+                      border-slate-300
+                      px-3
+                      py-2
+                      text-sm
+                      outline-none
+                      focus:border-slate-900
+                    "
+                  />
+
+                  {(passwordMessage ||
+                    passwordError) && (
+                    <p
+                      className={`
+                        text-sm
+                        ${
+                          passwordError
+                            ? "text-red-600"
+                            : "text-green-600"
+                        }
+                      `}
+                    >
+                      {passwordError
+                        ? "Could not update password."
+                        : passwordMessage}
+                    </p>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={
+                      updatingPassword ||
+                      !currentPassword ||
+                      newPassword.length < 6 ||
+                      confirmPassword.length < 6
+                    }
+                    className="
+                      w-full
+                      rounded-lg
+                      bg-slate-900
+                      px-4
+                      py-2
+                      text-sm
+                      font-medium
+                      text-white
+                      transition
+                      hover:bg-slate-700
+                      disabled:cursor-not-allowed
+                      disabled:opacity-60
+                    "
+                  >
+                    {updatingPassword
+                      ? "Saving..."
+                      : "Save password"}
+                  </button>
+                </form>
+              )}
+            </div>
+
+            {!isPasswordOpen &&
+              passwordMessage && (
+                <p
+                  className="
+                    mt-3
+                    text-sm
+                    text-green-600
+                  "
+                >
+                  {passwordMessage}
+                </p>
+              )}
 
             <button
               type="button"

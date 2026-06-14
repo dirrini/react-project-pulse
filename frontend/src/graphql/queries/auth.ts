@@ -57,3 +57,9 @@ export const UPDATE_USER_MUTATION = gql`
     }
   }
 `;
+
+export const UPDATE_MY_PASSWORD_MUTATION = gql`
+  mutation UpdateMyPassword($input: UpdateMyPasswordInput!) {
+    updateMyPassword(input: $input)
+  }
+`;

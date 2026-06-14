@@ -30,6 +30,11 @@ export const authSchema = `#graphql
     role: String
   }
 
+  input UpdateMyPasswordInput {
+    currentPassword: String!
+    newPassword: String!
+  }
+
   extend type Mutation {
     login(
       email: String!
@@ -44,6 +49,10 @@ export const authSchema = `#graphql
       id: ID!
       input: UpdateUserInput!
     ): User!
+
+    updateMyPassword(
+      input: UpdateMyPasswordInput!
+    ): Boolean!
   }
 
 `;

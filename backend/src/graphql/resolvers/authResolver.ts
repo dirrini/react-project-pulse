@@ -6,6 +6,7 @@ import {
   verifyPassword
 } from "../../lib/auth";
 import {
+  requireAuth,
   requireUserManager,
   type GraphQLContext
 } from "../context";
@@ -238,6 +239,61 @@ export const authResolver = {
             : {})
         }
       });
+    },
+    updateMyPassword: async (
+      _: unknown,
+      args: {
+        input: {
+          currentPassword: string;
+          newPassword: string;
+        };
+      },
+      context: GraphQLContext
+    ) => {
+      const currentUser =
+        requireAuth(context);
+
+      if (
+        !verifyPassword(
+          args.input.currentPassword,
+          currentUser.passwordHash
+        )
+      ) {
+        throw new GraphQLError(
+          "Current password is incorrect.",
+          {
+            extensions: {
+              code: "BAD_USER_INPUT"
+            }
+          }
+        );
+      }
+
+      if (
+        args.input.newPassword.length < 6
+      ) {
+        throw new GraphQLError(
+          "New password must be at least 6 characters.",
+          {
+            extensions: {
+              code: "BAD_USER_INPUT"
+            }
+          }
+        );
+      }
+
+      await prisma.user.update({
+        where: {
+          id: currentUser.id
+        },
+        data: {
+          passwordHash: hashPassword(
+            args.input.newPassword
+          )
+        }
+      });
+
+      return true;
     }
   }
 };
