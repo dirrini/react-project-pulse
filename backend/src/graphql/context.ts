@@ -47,6 +47,52 @@ export function requireAdmin(
   return currentUser;
 }
 
+export function requireUserManager(
+  context: GraphQLContext
+) {
+  const currentUser =
+    requireAuth(context);
+
+  if (
+    currentUser.role !== "ADMIN" &&
+    currentUser.role !== "PROJECT_MANAGER"
+  ) {
+    throw new GraphQLError(
+      "User management access required.",
+      {
+        extensions: {
+          code: "FORBIDDEN"
+        }
+      }
+    );
+  }
+
+  return currentUser;
+}
+
+export function requireProjectManager(
+  context: GraphQLContext
+) {
+  const currentUser =
+    requireAuth(context);
+
+  if (
+    currentUser.role !== "ADMIN" &&
+    currentUser.role !== "PROJECT_MANAGER"
+  ) {
+    throw new GraphQLError(
+      "Project management access required.",
+      {
+        extensions: {
+          code: "FORBIDDEN"
+        }
+      }
+    );
+  }
+
+  return currentUser;
+}
+
 function getTokenFromRequest(req: Request) {
   const authorization =
     req.headers.authorization;

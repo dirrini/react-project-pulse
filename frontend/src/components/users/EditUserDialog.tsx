@@ -3,49 +3,47 @@ import {
   type FormEvent
 } from "react";
 
-import type { UserRole }
-  from "../../types/User";
+import type {
+  User,
+  UserRole
+} from "../../types/User";
 
-export type CreateUserFormValues = {
+export type EditUserFormValues = {
   name: string;
   email: string;
-  password: string;
   role: UserRole;
 };
 
-interface CreateUserDialogProps {
-  creating: boolean;
+interface EditUserDialogProps {
+  user: User;
+  saving: boolean;
   errorMessage?: string;
   onClose: () => void;
-  onCreate: (
-    values: CreateUserFormValues
+  onSave: (
+    values: EditUserFormValues
   ) => Promise<void>;
 }
 
-const initialForm: CreateUserFormValues = {
-  name: "",
-  email: "",
-  password: "",
-  role: "MEMBER"
-};
-
-export default function CreateUserDialog({
-  creating,
+export default function EditUserDialog({
+  user,
+  saving,
   errorMessage,
   onClose,
-  onCreate
-}: CreateUserDialogProps) {
+  onSave
+}: EditUserDialogProps) {
   const [form, setForm] =
-    useState<CreateUserFormValues>(
-      initialForm
-    );
+    useState<EditUserFormValues>({
+      name: user.name,
+      email: user.email,
+      role: user.role
+    });
 
   const handleSubmit = async (
     event: FormEvent<HTMLFormElement>
   ) => {
     event.preventDefault();
 
-    await onCreate({
+    await onSave({
       ...form,
       name: form.name.trim(),
       email: form.email
@@ -86,7 +84,7 @@ export default function CreateUserDialog({
           "
         >
           <h3 className="text-xl font-semibold">
-            New user
+            Edit user
           </h3>
 
           <button
@@ -178,93 +176,47 @@ export default function CreateUserDialog({
             />
           </label>
 
-          <div
-            className="
-              grid
-              grid-cols-1
-              gap-4
-              sm:grid-cols-2
-            "
-          >
-            <label className="block">
-              <span
-                className="
-                  mb-1
-                  block
-                  text-sm
-                  font-medium
-                  text-slate-700
-                "
-              >
-                Password
-              </span>
-              <input
-                required
-                minLength={6}
-                type="password"
-                value={form.password}
-                onChange={(event) =>
-                  setForm({
-                    ...form,
-                    password:
-                      event.target.value
-                  })
-                }
-                className="
-                  w-full
-                  rounded-lg
-                  border
-                  border-slate-300
-                  px-3
-                  py-2
-                  outline-none
-                  focus:border-slate-900
-                "
-              />
-            </label>
-
-            <label className="block">
-              <span
-                className="
-                  mb-1
-                  block
-                  text-sm
-                  font-medium
-                  text-slate-700
-                "
-              >
-                Role
-              </span>
-              <select
-                value={form.role}
-                onChange={(event) =>
-                  setForm({
-                    ...form,
-                    role:
-                      event.target
-                        .value as UserRole
-                  })
-                }
-                className="
-                  w-full
-                  rounded-lg
-                  border
-                  border-slate-300
-                  px-3
-                  py-2
-                  outline-none
-                  focus:border-slate-900
-                "
-              >
-                <option value="MEMBER">
-                  Member
-                </option>
-                <option value="PROJECT_MANAGER">
-                  Project Manager
-                </option>
-              </select>
-            </label>
-          </div>
+          <label className="block">
+            <span
+              className="
+                mb-1
+                block
+                text-sm
+                font-medium
+                text-slate-700
+              "
+            >
+              Role
+            </span>
+            <select
+              value={form.role}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  role:
+                    event.target
+                      .value as UserRole
+                })
+              }
+              className="
+                w-full
+                rounded-lg
+                border
+                border-slate-300
+                px-3
+                py-2
+                outline-none
+                focus:border-slate-900
+              "
+            >
+              <option value="MEMBER">
+                Member
+              </option>
+              <option value="PROJECT_MANAGER">
+                Project Manager
+              </option>
+            </select>
+          </label>
 
           {errorMessage && (
             <p className="text-sm text-red-600">
@@ -298,10 +250,9 @@ export default function CreateUserDialog({
             <button
               type="submit"
               disabled={
-                creating ||
+                saving ||
                 !form.name.trim() ||
-                !form.email.trim() ||
-                form.password.length < 6
+                !form.email.trim()
               }
               className="
                 rounded-lg
@@ -317,9 +268,9 @@ export default function CreateUserDialog({
                 disabled:opacity-60
               "
             >
-              {creating
-                ? "Creating..."
-                : "Create user"}
+              {saving
+                ? "Saving..."
+                : "Save changes"}
             </button>
           </div>
         </form>

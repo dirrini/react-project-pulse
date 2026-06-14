@@ -7,8 +7,12 @@ import {
 import CreateUserDialog, {
   type CreateUserFormValues
 } from "../components/users/CreateUserDialog";
+import EditUserDialog, {
+  type EditUserFormValues
+} from "../components/users/EditUserDialog";
 import {
   CREATE_USER_MUTATION,
+  UPDATE_USER_MUTATION,
   USERS_QUERY
 } from "../graphql/queries/auth";
 
@@ -18,9 +22,24 @@ type UsersQueryData = {
   users: User[];
 };
 
+function formatRole(role: string) {
+  return role
+    .replace("_", " ")
+    .toLowerCase()
+    .replace(
+      /\b\w/g,
+      (character) =>
+        character.toUpperCase()
+    );
+}
+
 export default function Users() {
   const [isCreateOpen, setIsCreateOpen] =
     useState(false);
+  const [
+    editingUser,
+    setEditingUser
+  ] = useState<User | null>(null);
   const {
     data,
     loading,
@@ -45,6 +64,20 @@ export default function Users() {
       ]
     }
   );
+  const [
+    updateUser,
+    {
+      loading: updating,
+      error: updateError
+    }
+  ] = useMutation(
+    UPDATE_USER_MUTATION,
+    {
+      refetchQueries: [
+        { query: USERS_QUERY }
+      ]
+    }
+  );
 
   const handleCreateUser = async (
     values: CreateUserFormValues
@@ -56,6 +89,22 @@ export default function Users() {
     });
 
     setIsCreateOpen(false);
+  };
+
+  const handleUpdateUser = async (
+    values: EditUserFormValues
+  ) => {
+    if (!editingUser)
+      return;
+
+    await updateUser({
+      variables: {
+        id: editingUser.id,
+        input: values
+      }
+    });
+
+    setEditingUser(null);
   };
 
   const users = data?.users ?? [];
@@ -186,7 +235,15 @@ export default function Users() {
               {users.map((user) => (
                 <tr
                   key={user.id}
-                  className="border-t"
+                  onClick={() =>
+                    setEditingUser(user)
+                  }
+                  className="
+                    cursor-pointer
+                    border-t
+                    transition
+                    hover:bg-slate-50
+                  "
                 >
                   <td
                     className="
@@ -221,7 +278,7 @@ export default function Users() {
                         text-slate-700
                       "
                     >
-                      {user.role}
+                      {formatRole(user.role)}
                     </span>
                   </td>
                 </tr>
@@ -256,6 +313,22 @@ export default function Users() {
             setIsCreateOpen(false)
           }
           onCreate={handleCreateUser}
+        />
+      )}
+
+      {editingUser && (
+        <EditUserDialog
+          user={editingUser}
+          saving={updating}
+          errorMessage={
+            updateError
+              ? "Could not update user."
+              : undefined
+          }
+          onClose={() =>
+            setEditingUser(null)
+          }
+          onSave={handleUpdateUser}
         />
       )}
     </div>

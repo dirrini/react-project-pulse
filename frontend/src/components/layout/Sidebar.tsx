@@ -22,8 +22,9 @@ export default function Sidebar({
 }: SidebarProps) {
   const { data } =
     useQuery<MeQueryData>(ME_QUERY);
-  const isAdmin =
-    data?.me?.role === "ADMIN";
+  const canManageUsers =
+    data?.me?.role === "ADMIN" ||
+    data?.me?.role === "PROJECT_MANAGER";
 
   return (
     <>
@@ -144,7 +145,7 @@ export default function Sidebar({
             </Link>
           </li>
 
-          {isAdmin && (
+          {canManageUsers && (
             <li>
               <Link
                 to="/users"

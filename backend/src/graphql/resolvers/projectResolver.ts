@@ -1,5 +1,5 @@
 import {
-  requireAuth,
+  requireProjectManager,
   type GraphQLContext
 } from "../context";
 import { prisma } from "../../lib/prisma";
@@ -42,7 +42,7 @@ export const projectResolver = {
       },
       context: GraphQLContext
     ) => {
-      requireAuth(context);
+      requireProjectManager(context);
 
       return prisma.project.create({
         data: args.input,
@@ -64,7 +64,7 @@ export const projectResolver = {
       },
       context: GraphQLContext
     ) => {
-      requireAuth(context);
+      requireProjectManager(context);
 
       return prisma.project.update({
         where: {
@@ -88,7 +88,7 @@ export const projectResolver = {
       },
       context: GraphQLContext
     ) => {
-      requireAuth(context);
+      requireProjectManager(context);
 
       return prisma.task.create({
         data: {

@@ -2,7 +2,10 @@ import {
   useMemo,
   useState
 } from "react";
-import { useMutation } from "@apollo/client/react";
+import {
+  useMutation,
+  useQuery
+} from "@apollo/client/react";
 
 import CreateProjectDialog, {
   type CreateProjectFormValues
@@ -15,9 +18,23 @@ import {
   CREATE_PROJECT_MUTATION,
   PROJECTS_QUERY
 } from "../graphql/queries/projects";
+import { ME_QUERY }
+  from "../graphql/queries/auth";
+
+type MeQueryData = {
+  me: {
+    role: string;
+  } | null;
+};
 
 export default function Projects() {
   const { data, loading } = useProjects();
+  const { data: meData } =
+    useQuery<MeQueryData>(ME_QUERY);
+  const canManageProjects =
+    meData?.me?.role === "ADMIN" ||
+    meData?.me?.role ===
+      "PROJECT_MANAGER";
   const [
     createProject,
     { loading: creating, error: createError }
@@ -114,25 +131,27 @@ export default function Projects() {
             projects
           </span>
 
-          <button
-            type="button"
-            onClick={() =>
-              setIsCreateOpen(true)
-            }
-            className="
-              rounded-lg
-              bg-slate-900
-              px-4
-              py-2
-              text-sm
-              font-medium
-              text-white
-              transition
-              hover:bg-slate-700
-            "
-          >
-            New project
-          </button>
+          {canManageProjects && (
+            <button
+              type="button"
+              onClick={() =>
+                setIsCreateOpen(true)
+              }
+              className="
+                rounded-lg
+                bg-slate-900
+                px-4
+                py-2
+                text-sm
+                font-medium
+                text-white
+                transition
+                hover:bg-slate-700
+              "
+            >
+              New project
+            </button>
+          )}
         </div>
       </div>
 
@@ -248,7 +267,7 @@ export default function Projects() {
         )}
       </div>
 
-      {isCreateOpen && (
+      {isCreateOpen && canManageProjects && (
         <CreateProjectDialog
           creating={creating}
           errorMessage={

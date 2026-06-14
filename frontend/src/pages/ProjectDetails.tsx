@@ -23,6 +23,8 @@ import {
   PROJECTS_QUERY,
   UPDATE_PROJECT_MUTATION
 } from "../graphql/queries/projects";
+import { ME_QUERY }
+  from "../graphql/queries/auth";
 
 import type {
   Project,
@@ -33,6 +35,12 @@ import type {
 
 type ProjectQueryData = {
   project: Project | null;
+};
+
+type MeQueryData = {
+  me: {
+    role: string;
+  } | null;
 };
 
 type ProjectFormState = {
@@ -95,6 +103,12 @@ export default function ProjectDetails() {
       fetchPolicy: "cache-and-network"
     }
   );
+  const { data: meData } =
+    useQuery<MeQueryData>(ME_QUERY);
+  const canManageProjects =
+    meData?.me?.role === "ADMIN" ||
+    meData?.me?.role ===
+      "PROJECT_MANAGER";
 
   const [
     updateProject,
@@ -279,25 +293,27 @@ export default function ProjectDetails() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() =>
-            setIsTaskDialogOpen(true)
-          }
-          className="
-            rounded-lg
-            bg-slate-900
-            px-4
-            py-2
-            text-sm
-            font-medium
-            text-white
-            transition
-            hover:bg-slate-700
-          "
-        >
-          New task
-        </button>
+        {canManageProjects && (
+          <button
+            type="button"
+            onClick={() =>
+              setIsTaskDialogOpen(true)
+            }
+            className="
+              rounded-lg
+              bg-slate-900
+              px-4
+              py-2
+              text-sm
+              font-medium
+              text-white
+              transition
+              hover:bg-slate-700
+            "
+          >
+            New task
+          </button>
+        )}
       </div>
 
       <div
@@ -308,16 +324,17 @@ export default function ProjectDetails() {
           xl:grid-cols-[minmax(0,420px)_1fr]
         "
       >
-        <form
-          onSubmit={handleUpdateProject}
-          className="
-            rounded-xl
-            border
-            bg-white
-            p-5
-            shadow-sm
-          "
-        >
+        {canManageProjects && (
+          <form
+            onSubmit={handleUpdateProject}
+            className="
+              rounded-xl
+              border
+              bg-white
+              p-5
+              shadow-sm
+            "
+          >
           <h3
             className="
               mb-4
@@ -536,7 +553,8 @@ export default function ProjectDetails() {
               ? "Saving..."
               : "Save changes"}
           </button>
-        </form>
+          </form>
+        )}
 
         <section>
           <div
@@ -643,7 +661,7 @@ export default function ProjectDetails() {
         </section>
       </div>
 
-      {isTaskDialogOpen && (
+      {isTaskDialogOpen && canManageProjects && (
         <CreateTaskDialog
           creating={creatingTask}
           errorMessage={
