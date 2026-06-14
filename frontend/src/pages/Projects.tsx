@@ -96,15 +96,6 @@ export default function Projects() {
           mb-4
         "
       >
-        <h2
-          className="
-            text-3xl
-            font-bold
-          "
-        >
-          Projects
-        </h2>
-
         <div
           className="
             flex
