@@ -70,7 +70,36 @@
 }
 
 .timeline-viewer .vis-item .vis-item-content {
-  padding: 0.5rem 0.75rem;
+  padding: 0.45rem 0.75rem;
+}
+
+.timeline-task-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.timeline-task-title,
+.timeline-task-description {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timeline-task-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.timeline-task-description {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.15;
+  opacity: 0.72;
 }
 
 .timeline-viewer .vis-item.vis-selected {

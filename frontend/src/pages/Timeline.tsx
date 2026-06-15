@@ -53,6 +53,11 @@ type TimelineAssignment = TaskUser & {
   task: Task;
 };
 
+type TimelineTaskItem = DataItem & {
+  taskDescription?: string;
+  taskTitle?: string;
+};
+
 moment.locale("en");
 
 const englishMoment =
@@ -204,6 +209,37 @@ function getAssignmentClass(
   return "timeline-item-todo";
 }
 
+function getTimelineTaskContent(task: {
+  title: string;
+  description?: string | null;
+}) {
+  const description =
+    task.description?.trim();
+  const content =
+    document.createElement("div");
+  const title =
+    document.createElement("span");
+
+  content.className =
+    "timeline-task-content";
+  title.className = "timeline-task-title";
+  title.textContent = task.title;
+  content.append(title);
+
+  if (description) {
+    const descriptionElement =
+      document.createElement("span");
+
+    descriptionElement.className =
+      "timeline-task-description";
+    descriptionElement.textContent =
+      description;
+    content.append(descriptionElement);
+  }
+
+  return content;
+}
+
 function buildTimelineGroups(
   users: User[]
 ): DataGroup[] {
@@ -216,11 +252,14 @@ function buildTimelineGroups(
 
 function buildTimelineItems(
   assignments: TimelineAssignment[]
-): DataItem[] {
+): TimelineTaskItem[] {
   return assignments.map((assignment) => ({
     id: assignment.id,
     group: assignment.user.id,
-    content: escapeHtml(assignment.task.title),
+    content: assignment.task.title,
+    taskDescription:
+      assignment.task.description ?? "",
+    taskTitle: assignment.task.title,
     start: new Date(
       `${assignment.estimatedStartDate}T00:00:00`
     ),
@@ -235,13 +274,7 @@ function buildTimelineItems(
     },
     className: getAssignmentClass(
       assignment.status
-    ),
-    title: [
-      escapeHtml(assignment.task.title),
-      escapeHtml(assignment.user.name),
-      formatStatus(assignment.status),
-      `${assignment.estimatedStartDate} to ${assignment.estimatedEndDate}`
-    ].join(" - ")
+    )
   }));
 }
 
@@ -301,6 +334,18 @@ function buildTimelineOptions(): TimelineOptions {
     horizontalScroll: false,
     zoomable: true,
     zoomKey: "",
+    template: (item) => {
+      const taskItem =
+        item as TimelineTaskItem;
+
+      return getTimelineTaskContent({
+        title:
+          taskItem.taskTitle ??
+          String(taskItem.content ?? ""),
+        description:
+          taskItem.taskDescription ?? ""
+      });
+    },
     margin: {
       axis: 18,
       item: {
