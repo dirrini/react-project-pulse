@@ -112,6 +112,13 @@ function addOneDay(date: string) {
   return nextDate;
 }
 
+function startOfDay(date: Date) {
+  const normalizedDate = new Date(date);
+  normalizedDate.setHours(0, 0, 0, 0);
+
+  return normalizedDate;
+}
+
 function formatDateId(date: Date) {
   return date
     .toISOString()
@@ -122,7 +129,7 @@ function getTimelineWindow(
   assignments: TimelineAssignment[]
 ) {
   if (assignments.length === 0) {
-    const today = new Date();
+    const today = startOfDay(new Date());
     const minDate = new Date(today);
     const maxDate = new Date(today);
 
@@ -164,8 +171,8 @@ function getTimelineWindow(
   maxDate.setDate(maxDate.getDate() + 3);
 
   return {
-    minDate,
-    maxDate
+    minDate: startOfDay(minDate),
+    maxDate: startOfDay(maxDate)
   };
 }
 
@@ -224,10 +231,11 @@ function buildWeekendItems(
     minDate,
     maxDate
   } = getTimelineWindow(assignments);
-  const cursor = new Date(minDate);
+  const cursor = startOfDay(minDate);
+  const finalDate = startOfDay(maxDate);
   const weekendItems: DataItem[] = [];
 
-  while (cursor <= maxDate) {
+  while (cursor <= finalDate) {
     const day = cursor.getDay();
 
     if (day === 0 || day === 6) {
@@ -263,6 +271,7 @@ function buildTimelineOptions(): TimelineOptions {
       item: "bottom"
     },
     horizontalScroll: false,
+    zoomable: true,
     zoomKey: "",
     margin: {
       axis: 18,
