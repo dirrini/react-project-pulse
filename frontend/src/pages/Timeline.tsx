@@ -304,8 +304,8 @@ function buildTimelineOptions(): TimelineOptions {
     margin: {
       axis: 18,
       item: {
-        horizontal: 8,
-        vertical: 6
+        horizontal: 0,
+        vertical: 20
       }
     }
   };
