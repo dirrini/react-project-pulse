@@ -121,6 +121,20 @@ function formatDateId(date: Date) {
 function getTimelineWindow(
   assignments: TimelineAssignment[]
 ) {
+  if (assignments.length === 0) {
+    const today = new Date();
+    const minDate = new Date(today);
+    const maxDate = new Date(today);
+
+    minDate.setDate(minDate.getDate() - 7);
+    maxDate.setDate(maxDate.getDate() + 7);
+
+    return {
+      minDate,
+      maxDate
+    };
+  }
+
   const dates = assignments.flatMap(
     (assignment) => [
       new Date(
@@ -206,10 +220,6 @@ function buildTimelineItems(
 function buildWeekendItems(
   assignments: TimelineAssignment[]
 ): DataItem[] {
-  if (assignments.length === 0) {
-    return [];
-  }
-
   const {
     minDate,
     maxDate
@@ -252,8 +262,8 @@ function buildTimelineOptions(): TimelineOptions {
       axis: "top",
       item: "bottom"
     },
-    horizontalScroll: true,
-    zoomKey: "ctrlKey",
+    horizontalScroll: false,
+    zoomKey: "",
     margin: {
       axis: 18,
       item: {
@@ -472,34 +482,18 @@ export default function Timeline() {
       handleSelect
     );
 
-    if (assignments.length > 0) {
-      const {
-        minDate,
-        maxDate
-      } = getTimelineWindow(assignments);
+    const {
+      minDate,
+      maxDate
+    } = getTimelineWindow(assignments);
 
-      timelineRef.current.setWindow(
-        minDate,
-        maxDate,
-        {
-          animation: false
-        }
-      );
-    } else {
-      const today = new Date();
-      const minDate = new Date(today);
-      const maxDate = new Date(today);
-
-      minDate.setDate(minDate.getDate() - 7);
-      maxDate.setDate(maxDate.getDate() + 7);
-      timelineRef.current.setWindow(
-        minDate,
-        maxDate,
-        {
-          animation: false
-        }
-      );
-    }
+    timelineRef.current.setWindow(
+      minDate,
+      maxDate,
+      {
+        animation: false
+      }
+    );
 
     return () => {
       timelineRef.current?.off(
