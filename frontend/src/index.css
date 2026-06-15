@@ -13,6 +13,23 @@
   color: #64748b;
 }
 
+.timeline-viewer .vis-labelset .vis-label,
+.timeline-viewer .vis-foreground .vis-group {
+  min-height: 56px;
+}
+
+.timeline-viewer .vis-label .vis-inner {
+  align-items: center;
+  display: flex;
+  min-height: 56px;
+  padding-bottom: 0;
+  padding-top: 0;
+}
+
+.timeline-viewer .vis-item {
+  cursor: pointer;
+}
+
 .vis-item.timeline-item-todo {
   background-color: #e2e8f0;
   border-color: #94a3b8;

@@ -4,17 +4,34 @@ import {
   useRef,
   useState
 } from "react";
-import { useQuery }
+import {
+  useMutation,
+  useQuery
+}
   from "@apollo/client/react";
+import { Plus } from "lucide-react";
+import moment from "moment";
 import {
   Timeline as VisTimeline,
   type DataGroup,
   type DataItem,
+  type MomentConstructor,
   type TimelineOptions
 } from "vis-timeline/standalone";
 import "vis-timeline/styles/vis-timeline-graph2d.min.css";
 
+import CreateTaskDialog, {
+  type CreateTaskFormValues
+} from "../components/projects/CreateTaskDialog";
+import EditTaskDialog, {
+  type EditTaskFormValues
+} from "../components/projects/EditTaskDialog";
 import StatusBadge from "../components/projects/StatusBadge";
+import {
+  CREATE_TASK_MUTATION,
+  UPDATE_TASK_MUTATION
+}
+  from "../graphql/queries/projects";
 import { TIMELINE_PROJECTS_QUERY }
   from "../graphql/queries/timeline";
 
@@ -34,6 +51,11 @@ type TimelineProjectsData = {
 type TimelineAssignment = TaskUser & {
   task: Task;
 };
+
+moment.locale("en");
+
+const englishMoment =
+  moment as MomentConstructor;
 
 function formatStatus(status: string) {
   return status
@@ -110,25 +132,32 @@ function buildTimelineItems(
   }));
 }
 
-const timelineOptions: TimelineOptions = {
-  editable: false,
-  stack: true,
-  selectable: true,
-  orientation: {
-    axis: "top",
-    item: "bottom"
-  },
-  horizontalScroll: true,
-  zoomKey: "ctrlKey",
-  height: "520px",
-  margin: {
-    axis: 18,
-    item: {
-      horizontal: 8,
-      vertical: 8
+function buildTimelineOptions(
+  height: number
+): TimelineOptions {
+  return {
+    editable: false,
+    groupHeightMode: "fixed",
+    stack: true,
+    selectable: true,
+    locale: "en",
+    moment: englishMoment,
+    orientation: {
+      axis: "top",
+      item: "bottom"
+    },
+    horizontalScroll: true,
+    zoomKey: "ctrlKey",
+    height: `${height}px`,
+    margin: {
+      axis: 18,
+      item: {
+        horizontal: 8,
+        vertical: 6
+      }
     }
-  }
-};
+  };
+}
 
 export default function Timeline() {
   const containerRef =
@@ -139,6 +168,12 @@ export default function Timeline() {
     selectedProjectId,
     setSelectedProjectId
   ] = useState("");
+  const [
+    isTaskDialogOpen,
+    setIsTaskDialogOpen
+  ] = useState(false);
+  const [editingTask, setEditingTask] =
+    useState<Task | null>(null);
 
   const {
     data,
@@ -148,6 +183,40 @@ export default function Timeline() {
     TIMELINE_PROJECTS_QUERY,
     {
       fetchPolicy: "cache-and-network"
+    }
+  );
+  const [
+    updateTask,
+    {
+      loading: updatingTask,
+      error: updateTaskError
+    }
+  ] = useMutation(
+    UPDATE_TASK_MUTATION,
+    {
+      refetchQueries: [
+        {
+          query: TIMELINE_PROJECTS_QUERY
+        }
+      ],
+      awaitRefetchQueries: true
+    }
+  );
+  const [
+    createTask,
+    {
+      loading: creatingTask,
+      error: createTaskError
+    }
+  ] = useMutation(
+    CREATE_TASK_MUTATION,
+    {
+      refetchQueries: [
+        {
+          query: TIMELINE_PROJECTS_QUERY
+        }
+      ],
+      awaitRefetchQueries: true
     }
   );
 
@@ -201,6 +270,49 @@ export default function Timeline() {
       (assignment) =>
         assignment.status === "DONE"
     ).length;
+  const timelineHeight = Math.max(
+    220,
+    84 + projectUsers.length * 56
+  );
+
+  const timelineOptions = useMemo(
+    () => buildTimelineOptions(timelineHeight),
+    [timelineHeight]
+  );
+
+  const handleCreateTask = async (
+    values: CreateTaskFormValues
+  ) => {
+    if (!selectedProject)
+      return;
+
+    await createTask({
+      variables: {
+        input: {
+          ...values,
+          projectId: selectedProject.id
+        }
+      }
+    });
+
+    setIsTaskDialogOpen(false);
+  };
+
+  const handleUpdateTask = async (
+    values: EditTaskFormValues
+  ) => {
+    if (!editingTask)
+      return;
+
+    await updateTask({
+      variables: {
+        id: editingTask.id,
+        input: values
+      }
+    });
+
+    setEditingTask(null);
+  };
 
   useEffect(() => {
     const container = containerRef.current;
@@ -228,6 +340,34 @@ export default function Timeline() {
         timelineOptions
       );
     }
+
+    const handleSelect = (properties: {
+      items: Array<string | number>;
+    }) => {
+      const selectedAssignmentId =
+        properties.items[0]?.toString();
+
+      if (!selectedAssignmentId)
+        return;
+
+      const selectedAssignment =
+        assignments.find(
+          (assignment) =>
+            assignment.id ===
+            selectedAssignmentId
+        );
+
+      if (selectedAssignment) {
+        setEditingTask(
+          selectedAssignment.task
+        );
+      }
+    };
+
+    timelineRef.current.on(
+      "select",
+      handleSelect
+    );
 
     if (assignments.length > 0) {
       const dates = assignments.flatMap(
@@ -265,10 +405,18 @@ export default function Timeline() {
         }
       );
     }
+
+    return () => {
+      timelineRef.current?.off(
+        "select",
+        handleSelect
+      );
+    };
   }, [
     assignments,
     projectUsers,
-    selectedProject
+    selectedProject,
+    timelineOptions
   ]);
 
   useEffect(
@@ -437,6 +585,31 @@ export default function Timeline() {
                     selectedProject.status
                   }
                 />
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setIsTaskDialogOpen(true)
+                  }
+                  className="
+                    flex
+                    h-8
+                    w-8
+                    items-center
+                    justify-center
+                    rounded-full
+                    border
+                    border-slate-300
+                    text-slate-600
+                    transition
+                    hover:bg-slate-100
+                    hover:text-slate-900
+                  "
+                  aria-label="Add task"
+                  title="Add task"
+                >
+                  <Plus size={16} />
+                </button>
               </div>
 
               <p className="text-sm text-slate-500">
@@ -540,9 +713,11 @@ export default function Timeline() {
 
               <div
                 ref={containerRef}
+                style={{
+                  height: timelineHeight
+                }}
                 className="
-                  min-h-[520px]
-                  overflow-hidden
+                  timeline-viewer
                   rounded-lg
                   border
                   border-slate-200
@@ -551,6 +726,39 @@ export default function Timeline() {
             </>
           )}
         </section>
+      )}
+
+      {isTaskDialogOpen && selectedProject && (
+        <CreateTaskDialog
+          creating={creatingTask}
+          projectUsers={projectUsers}
+          errorMessage={
+            createTaskError
+              ? "Could not create task."
+              : undefined
+          }
+          onClose={() =>
+            setIsTaskDialogOpen(false)
+          }
+          onCreate={handleCreateTask}
+        />
+      )}
+
+      {editingTask && selectedProject && (
+        <EditTaskDialog
+          task={editingTask}
+          saving={updatingTask}
+          projectUsers={projectUsers}
+          errorMessage={
+            updateTaskError
+              ? "Could not update task."
+              : undefined
+          }
+          onClose={() =>
+            setEditingTask(null)
+          }
+          onSave={handleUpdateTask}
+        />
       )}
     </div>
   );
