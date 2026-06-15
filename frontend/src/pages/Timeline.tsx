@@ -16,6 +16,7 @@ import {
   type DataGroup,
   type DataItem,
   type MomentConstructor,
+  type TimelineItem,
   type TimelineOptions
 } from "vis-timeline/standalone";
 import "vis-timeline/styles/vis-timeline-graph2d.min.css";
@@ -112,6 +113,13 @@ function addOneDay(date: string) {
   return nextDate;
 }
 
+function subtractOneDay(date: Date) {
+  const previousDate = new Date(date);
+  previousDate.setDate(previousDate.getDate() - 1);
+
+  return previousDate;
+}
+
 function startOfDay(date: Date) {
   const normalizedDate = new Date(date);
   normalizedDate.setHours(0, 0, 0, 0);
@@ -119,10 +127,18 @@ function startOfDay(date: Date) {
   return normalizedDate;
 }
 
+function formatLocalDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1)
+    .padStart(2, "0");
+  const day = String(date.getDate())
+    .padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
 function formatDateId(date: Date) {
-  return date
-    .toISOString()
-    .slice(0, 10);
+  return formatLocalDate(date);
 }
 
 function getTimelineWindow(
@@ -212,6 +228,11 @@ function buildTimelineItems(
       assignment.estimatedEndDate
     ),
     type: "range",
+    editable: {
+      remove: false,
+      updateGroup: false,
+      updateTime: true
+    },
     className: getAssignmentClass(
       assignment.status
     ),
@@ -249,6 +270,8 @@ function buildWeekendItems(
         start,
         end,
         type: "background",
+        editable: false,
+        selectable: false,
         className: "timeline-weekend"
       });
     }
@@ -261,7 +284,12 @@ function buildWeekendItems(
 
 function buildTimelineOptions(): TimelineOptions {
   return {
-    editable: false,
+    editable: {
+      add: false,
+      remove: false,
+      updateGroup: false,
+      updateTime: true
+    },
     stack: true,
     selectable: true,
     locale: "en",
@@ -434,6 +462,82 @@ export default function Timeline() {
     setEditingTask(null);
   };
 
+  const handleResizeAssignment = async (
+    item: TimelineItem,
+    callback: (
+      item: TimelineItem | null
+    ) => void
+  ) => {
+    const assignmentId =
+      item.id?.toString();
+    const selectedAssignment =
+      assignments.find(
+        (assignment) =>
+          assignment.id === assignmentId
+      );
+
+    if (
+      !selectedAssignment ||
+      !item.start ||
+      !item.end
+    ) {
+      callback(null);
+      return;
+    }
+
+    const nextStartDate =
+      formatLocalDate(
+        startOfDay(new Date(item.start))
+      );
+    const nextEndDate =
+      formatLocalDate(
+        subtractOneDay(
+          startOfDay(new Date(item.end))
+        )
+      );
+    const currentStartDate =
+      selectedAssignment.estimatedStartDate;
+    const currentEndDate =
+      selectedAssignment.estimatedEndDate;
+    const changedStart =
+      nextStartDate !== currentStartDate;
+    const changedEnd =
+      nextEndDate !== currentEndDate;
+
+    if (
+      (changedStart && changedEnd) ||
+      nextStartDate > nextEndDate
+    ) {
+      callback(null);
+      return;
+    }
+
+    callback(item);
+
+    await updateTask({
+      variables: {
+        id: selectedAssignment.task.id,
+        input: {
+          users:
+            selectedAssignment.task.users.map(
+              (taskUser) => ({
+                userId: taskUser.user.id,
+                status: taskUser.status,
+                estimatedStartDate:
+                  taskUser.id === assignmentId
+                    ? nextStartDate
+                    : taskUser.estimatedStartDate,
+                estimatedEndDate:
+                  taskUser.id === assignmentId
+                    ? nextEndDate
+                    : taskUser.estimatedEndDate
+              })
+            )
+        }
+      }
+    });
+  };
+
   useEffect(() => {
     const container = containerRef.current;
 
@@ -447,27 +551,36 @@ export default function Timeline() {
       ...buildWeekendItems(assignments),
       ...buildTimelineItems(assignments)
     ];
+    const options: TimelineOptions = {
+      ...timelineOptions,
+      onMove: (item, callback) => {
+        void handleResizeAssignment(
+          item,
+          callback
+        );
+      }
+    };
 
     if (!timelineRef.current) {
       timelineRef.current = new VisTimeline(
         container,
         items,
         groups,
-        timelineOptions
+        options
       );
     } else {
       timelineRef.current.setGroups(groups);
       timelineRef.current.setItems(items);
       timelineRef.current.setOptions(
-        timelineOptions
+        options
       );
     }
 
-    const handleSelect = (properties: {
-      items: Array<string | number>;
+    const handleDoubleClick = (properties: {
+      item?: string | number;
     }) => {
       const selectedAssignmentId =
-        properties.items[0]?.toString();
+        properties.item?.toString();
 
       if (!selectedAssignmentId)
         return;
@@ -487,8 +600,8 @@ export default function Timeline() {
     };
 
     timelineRef.current.on(
-      "select",
-      handleSelect
+      "doubleClick",
+      handleDoubleClick
     );
 
     const {
@@ -506,8 +619,8 @@ export default function Timeline() {
 
     return () => {
       timelineRef.current?.off(
-        "select",
-        handleSelect
+        "doubleClick",
+        handleDoubleClick
       );
     };
   }, [
