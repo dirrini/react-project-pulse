@@ -25,6 +25,7 @@ export default function Sidebar({
   const canManageUsers =
     data?.me?.role === "ADMIN" ||
     data?.me?.role === "PROJECT_MANAGER";
+  const canViewTimeline = canManageUsers;
 
   return (
     <>
@@ -144,6 +145,24 @@ export default function Sidebar({
               Projects
             </Link>
           </li>
+
+          {canViewTimeline && (
+            <li>
+              <Link
+                to="/timeline"
+                onClick={onClose}
+                className="
+                  block
+                  px-4
+                  py-2
+                  rounded-lg
+                  hover:bg-slate-800
+                "
+              >
+                Timeline
+              </Link>
+            </li>
+          )}
 
           {canManageUsers && (
             <li>

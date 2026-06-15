@@ -1,1 +1,57 @@
 @import "tailwindcss";
+
+.vis-timeline {
+  border: 0;
+  font-family: inherit;
+}
+
+.vis-labelset .vis-label {
+  color: #334155;
+}
+
+.vis-time-axis .vis-text {
+  color: #64748b;
+}
+
+.vis-item.timeline-item-todo {
+  background-color: #e2e8f0;
+  border-color: #94a3b8;
+  color: #334155;
+}
+
+.vis-item.timeline-item-in-progress {
+  background-color: #fef3c7;
+  border-color: #f59e0b;
+  color: #92400e;
+}
+
+.vis-item.timeline-item-done {
+  background-color: #dbeafe;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+.timeline-legend {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.375rem;
+}
+
+.timeline-legend::before {
+  border-radius: 9999px;
+  content: "";
+  height: 0.625rem;
+  width: 0.625rem;
+}
+
+.timeline-legend-todo::before {
+  background-color: #94a3b8;
+}
+
+.timeline-legend-in-progress::before {
+  background-color: #f59e0b;
+}
+
+.timeline-legend-done::before {
+  background-color: #3b82f6;
+}

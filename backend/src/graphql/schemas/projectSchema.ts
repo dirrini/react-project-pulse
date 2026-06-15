@@ -42,6 +42,7 @@ export const projectSchema = `#graphql
   extend type Query {
     projects: [Project!]!
     project(id: ID!): Project
+    timelineProjects: [Project!]!
   }
 
   input CreateProjectInput {

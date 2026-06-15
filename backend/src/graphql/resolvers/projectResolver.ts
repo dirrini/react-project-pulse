@@ -1,4 +1,5 @@
 import {
+  requireAuth,
   requireProjectManager,
   type GraphQLContext
 } from "../context";
@@ -187,6 +188,47 @@ export const projectResolver = {
       });
 
       return mapProjectUsers(project);
+    },
+    timelineProjects: async (
+      _: unknown,
+      __: unknown,
+      context: GraphQLContext
+    ) => {
+      const currentUser = requireAuth(context);
+
+      if (
+        currentUser.role !== "ADMIN" &&
+        currentUser.role !== "PROJECT_MANAGER"
+      ) {
+        throw new GraphQLError(
+          "Timeline access required.",
+          {
+            extensions: {
+              code: "FORBIDDEN"
+            }
+          }
+        );
+      }
+
+      const projects =
+        await prisma.project.findMany({
+          where:
+            currentUser.role === "ADMIN"
+              ? undefined
+              : {
+                  users: {
+                    some: {
+                      userId: currentUser.id
+                    }
+                  }
+                },
+          include: projectInclude,
+          orderBy: {
+            name: "asc"
+          }
+        });
+
+      return projects.map(mapProjectUsers);
     }
   },
   Mutation: {

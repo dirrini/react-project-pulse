@@ -109,6 +109,10 @@ export default function Header({
       return "Project details";
     }
 
+    if (pathname === "/timeline") {
+      return "Timeline";
+    }
+
     if (pathname === "/users") {
       return "Users";
     }
