@@ -12,6 +12,7 @@ import EditUserDialog, {
 } from "../components/users/EditUserDialog";
 import {
   CREATE_USER_MUTATION,
+  ME_QUERY,
   UPDATE_USER_MUTATION,
   USERS_QUERY
 } from "../graphql/queries/auth";
@@ -20,6 +21,12 @@ import type { User } from "../types/User";
 
 type UsersQueryData = {
   users: User[];
+};
+
+type MeQueryData = {
+  me: {
+    role: string;
+  } | null;
 };
 
 function formatRole(role: string) {
@@ -40,6 +47,12 @@ export default function Users() {
     editingUser,
     setEditingUser
   ] = useState<User | null>(null);
+  const { data: meData } =
+    useQuery<MeQueryData>(ME_QUERY);
+  const canManageUsers =
+    meData?.me?.role === "ADMIN" ||
+    meData?.me?.role ===
+      "PROJECT_MANAGER";
   const {
     data,
     loading,
@@ -139,25 +152,27 @@ export default function Users() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() =>
-            setIsCreateOpen(true)
-          }
-          className="
-            rounded-lg
-            bg-slate-900
-            px-4
-            py-2
-            text-sm
-            font-medium
-            text-white
-            transition
-            hover:bg-slate-700
-          "
-        >
-          New user
-        </button>
+        {canManageUsers && (
+          <button
+            type="button"
+            onClick={() =>
+              setIsCreateOpen(true)
+            }
+            className="
+              rounded-lg
+              bg-slate-900
+              px-4
+              py-2
+              text-sm
+              font-medium
+              text-white
+              transition
+              hover:bg-slate-700
+            "
+          >
+            New user
+          </button>
+        )}
       </div>
 
       {loading && (
@@ -175,7 +190,7 @@ export default function Users() {
             text-slate-500
           "
         >
-          You do not have access to manage users.
+          {error.message}
         </div>
       )}
 
@@ -301,12 +316,12 @@ export default function Users() {
         </div>
       )}
 
-      {isCreateOpen && (
+      {isCreateOpen && canManageUsers && (
         <CreateUserDialog
           creating={creating}
           errorMessage={
             createError
-              ? "Could not create user."
+              ? createError.message
               : undefined
           }
           onClose={() =>
@@ -322,7 +337,7 @@ export default function Users() {
           saving={updating}
           errorMessage={
             updateError
-              ? "Could not update user."
+              ? updateError.message
               : undefined
           }
           onClose={() =>
