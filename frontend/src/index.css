@@ -28,24 +28,48 @@
 
 .timeline-viewer .vis-item {
   cursor: pointer;
+  border-radius: 10px;
+  border-width: 1px;
+  box-shadow: 0 6px 14px rgb(15 23 42 / 0.08);
+  font-family: ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.timeline-viewer .vis-item .vis-item-content {
+  padding: 0.5rem 0.75rem;
+}
+
+.timeline-viewer .vis-item.vis-selected {
+  box-shadow: 0 0 0 2px rgb(15 23 42 / 0.12),
+    0 8px 18px rgb(15 23 42 / 0.12);
+}
+
+.timeline-viewer .vis-item.timeline-weekend {
+  background-color: rgb(148 163 184 / 0.12);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  cursor: default;
 }
 
 .vis-item.timeline-item-todo {
-  background-color: #e2e8f0;
-  border-color: #94a3b8;
-  color: #334155;
+  background-color: #e8eef6;
+  border-color: #9aaeca;
+  color: #1e3a5f;
 }
 
 .vis-item.timeline-item-in-progress {
-  background-color: #fef3c7;
+  background-color: #fff2bd;
   border-color: #f59e0b;
-  color: #92400e;
+  color: #8a3b05;
 }
 
 .vis-item.timeline-item-done {
-  background-color: #dbeafe;
+  background-color: #d7e7ff;
   border-color: #3b82f6;
-  color: #1d4ed8;
+  color: #1450b5;
 }
 
 .timeline-legend {

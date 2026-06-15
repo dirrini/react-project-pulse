@@ -84,6 +84,49 @@ function addOneDay(date: string) {
   return nextDate;
 }
 
+function formatDateId(date: Date) {
+  return date
+    .toISOString()
+    .slice(0, 10);
+}
+
+function getTimelineWindow(
+  assignments: TimelineAssignment[]
+) {
+  const dates = assignments.flatMap(
+    (assignment) => [
+      new Date(
+        `${assignment.estimatedStartDate}T00:00:00`
+      ),
+      addOneDay(
+        assignment.estimatedEndDate
+      )
+    ]
+  );
+  const minDate = new Date(
+    Math.min(
+      ...dates.map((date) =>
+        date.getTime()
+      )
+    )
+  );
+  const maxDate = new Date(
+    Math.max(
+      ...dates.map((date) =>
+        date.getTime()
+      )
+    )
+  );
+
+  minDate.setDate(minDate.getDate() - 3);
+  maxDate.setDate(maxDate.getDate() + 3);
+
+  return {
+    minDate,
+    maxDate
+  };
+}
+
 function getAssignmentClass(
   status: TaskStatus
 ) {
@@ -130,6 +173,44 @@ function buildTimelineItems(
       `${assignment.estimatedStartDate} to ${assignment.estimatedEndDate}`
     ].join(" - ")
   }));
+}
+
+function buildWeekendItems(
+  assignments: TimelineAssignment[]
+): DataItem[] {
+  if (assignments.length === 0) {
+    return [];
+  }
+
+  const {
+    minDate,
+    maxDate
+  } = getTimelineWindow(assignments);
+  const cursor = new Date(minDate);
+  const weekendItems: DataItem[] = [];
+
+  while (cursor <= maxDate) {
+    const day = cursor.getDay();
+
+    if (day === 0 || day === 6) {
+      const start = new Date(cursor);
+      const end = new Date(cursor);
+      end.setDate(end.getDate() + 1);
+
+      weekendItems.push({
+        id: `weekend-${formatDateId(start)}`,
+        content: "",
+        start,
+        end,
+        type: "background",
+        className: "timeline-weekend"
+      });
+    }
+
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return weekendItems;
 }
 
 function buildTimelineOptions(
@@ -323,8 +404,10 @@ export default function Timeline() {
 
     const groups =
       buildTimelineGroups(projectUsers);
-    const items =
-      buildTimelineItems(assignments);
+    const items = [
+      ...buildWeekendItems(assignments),
+      ...buildTimelineItems(assignments)
+    ];
 
     if (!timelineRef.current) {
       timelineRef.current = new VisTimeline(
@@ -370,33 +453,11 @@ export default function Timeline() {
     );
 
     if (assignments.length > 0) {
-      const dates = assignments.flatMap(
-        (assignment) => [
-          new Date(
-            `${assignment.estimatedStartDate}T00:00:00`
-          ),
-          addOneDay(
-            assignment.estimatedEndDate
-          )
-        ]
-      );
-      const minDate = new Date(
-        Math.min(
-          ...dates.map((date) =>
-            date.getTime()
-          )
-        )
-      );
-      const maxDate = new Date(
-        Math.max(
-          ...dates.map((date) =>
-            date.getTime()
-          )
-        )
-      );
+      const {
+        minDate,
+        maxDate
+      } = getTimelineWindow(assignments);
 
-      minDate.setDate(minDate.getDate() - 3);
-      maxDate.setDate(maxDate.getDate() + 3);
       timelineRef.current.setWindow(
         minDate,
         maxDate,
