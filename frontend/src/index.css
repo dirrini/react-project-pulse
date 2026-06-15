@@ -3,6 +3,7 @@
 .vis-timeline {
   border: 0;
   font-family: inherit;
+  transition: height 180ms ease;
 }
 
 .vis-labelset .vis-label {
@@ -56,6 +57,33 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.timeline-user-hide {
+  align-items: center;
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  color: #94a3b8;
+  cursor: pointer;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  font-weight: 700;
+  height: 1.5rem;
+  justify-content: center;
+  line-height: 1;
+  margin-left: auto;
+  transition: background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+  width: 1.5rem;
+}
+
+.timeline-user-hide:hover {
+  background-color: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #334155;
 }
 
 .timeline-viewer .vis-item {

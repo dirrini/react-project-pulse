@@ -9,7 +9,10 @@ import {
   useQuery
 }
   from "@apollo/client/react";
-import { Plus } from "lucide-react";
+import {
+  Plus,
+  X
+} from "lucide-react";
 import moment from "moment";
 import {
   Timeline as VisTimeline,
@@ -99,14 +102,22 @@ function getTimelineUserLabel(user: User) {
   const label = document.createElement("div");
   const avatar = document.createElement("span");
   const name = document.createElement("span");
+  const hideButton =
+    document.createElement("button");
 
   label.className = "timeline-user-label";
   avatar.className = "timeline-user-avatar";
   name.className = "timeline-user-name";
+  hideButton.className = "timeline-user-hide";
+  hideButton.type = "button";
+  hideButton.title = "Hide user";
+  hideButton.ariaLabel = `Hide ${user.name}`;
+  hideButton.dataset.userId = user.id;
   avatar.textContent = initials;
   name.textContent = user.name;
+  hideButton.textContent = "x";
 
-  label.append(avatar, name);
+  label.append(avatar, name, hideButton);
 
   return label;
 }
@@ -146,54 +157,42 @@ function formatDateId(date: Date) {
   return formatLocalDate(date);
 }
 
-function getTimelineWindow(
-  assignments: TimelineAssignment[]
-) {
-  if (assignments.length === 0) {
-    const today = startOfDay(new Date());
-    const minDate = new Date(today);
-    const maxDate = new Date(today);
-
-    minDate.setDate(minDate.getDate() - 7);
-    maxDate.setDate(maxDate.getDate() + 7);
-
-    return {
-      minDate,
-      maxDate
-    };
-  }
-
-  const dates = assignments.flatMap(
-    (assignment) => [
-      new Date(
-        `${assignment.estimatedStartDate}T00:00:00`
-      ),
-      addOneDay(
-        assignment.estimatedEndDate
-      )
-    ]
+function getMonthRange() {
+  const today = new Date();
+  const start = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    1
   );
-  const minDate = new Date(
-    Math.min(
-      ...dates.map((date) =>
-        date.getTime()
-      )
-    )
+  const end = new Date(
+    today.getFullYear(),
+    today.getMonth() + 1,
+    0
   );
-  const maxDate = new Date(
-    Math.max(
-      ...dates.map((date) =>
-        date.getTime()
-      )
-    )
-  );
-
-  minDate.setDate(minDate.getDate() - 3);
-  maxDate.setDate(maxDate.getDate() + 3);
 
   return {
-    minDate: startOfDay(minDate),
-    maxDate: startOfDay(maxDate)
+    start: formatLocalDate(start),
+    end: formatLocalDate(end)
+  };
+}
+
+function getDateFromInput(value: string) {
+  return startOfDay(
+    new Date(`${value}T00:00:00`)
+  );
+}
+
+function getTimelineWindow(
+  startDate: string,
+  endDate: string
+) {
+  const minDate =
+    getDateFromInput(startDate);
+  const maxDate = addOneDay(endDate);
+
+  return {
+    minDate,
+    maxDate
   };
 }
 
@@ -279,12 +278,16 @@ function buildTimelineItems(
 }
 
 function buildWeekendItems(
-  assignments: TimelineAssignment[]
+  startDate: string,
+  endDate: string
 ): DataItem[] {
   const {
     minDate,
     maxDate
-  } = getTimelineWindow(assignments);
+  } = getTimelineWindow(
+    startDate,
+    endDate
+  );
   const cursor = startOfDay(minDate);
   const finalDate = startOfDay(maxDate);
   const weekendItems: DataItem[] = [];
@@ -315,7 +318,18 @@ function buildWeekendItems(
   return weekendItems;
 }
 
-function buildTimelineOptions(): TimelineOptions {
+function buildTimelineOptions(
+  startDate: string,
+  endDate: string
+): TimelineOptions {
+  const {
+    minDate,
+    maxDate
+  } = getTimelineWindow(
+    startDate,
+    endDate
+  );
+
   return {
     editable: {
       add: false,
@@ -332,8 +346,16 @@ function buildTimelineOptions(): TimelineOptions {
       item: "bottom"
     },
     horizontalScroll: false,
+    min: minDate,
+    max: maxDate,
+    moveable: true,
     zoomable: true,
+    zoomFriction: 8,
     zoomKey: "",
+    zoomMax:
+      maxDate.getTime() -
+      minDate.getTime(),
+    zoomMin: 1000 * 60 * 60 * 24,
     template: (item) => {
       const taskItem =
         item as TimelineTaskItem;
@@ -365,6 +387,24 @@ export default function Timeline() {
     selectedProjectId,
     setSelectedProjectId
   ] = useState("");
+  const initialDateRange = useMemo(
+    () => getMonthRange(),
+    []
+  );
+  const [
+    rangeStartDate,
+    setRangeStartDate
+  ] = useState(initialDateRange.start);
+  const [
+    rangeEndDate,
+    setRangeEndDate
+  ] = useState(initialDateRange.end);
+  const [
+    hiddenUserIds,
+    setHiddenUserIds
+  ] = useState<Set<string>>(
+    () => new Set()
+  );
   const [
     isTaskDialogOpen,
     setIsTaskDialogOpen
@@ -431,6 +471,16 @@ export default function Timeline() {
     setSelectedProjectId(projects[0].id);
   }, [projects, selectedProjectId]);
 
+  useEffect(() => {
+    setHiddenUserIds(new Set());
+  }, [selectedProjectId]);
+
+  useEffect(() => {
+    if (rangeStartDate > rangeEndDate) {
+      setRangeEndDate(rangeStartDate);
+    }
+  }, [rangeEndDate, rangeStartDate]);
+
   const selectedProject = useMemo(
     () =>
       projects.find(
@@ -449,6 +499,21 @@ export default function Timeline() {
       ) ?? [],
     [selectedProject]
   );
+  const visibleProjectUsers = useMemo(
+    () =>
+      projectUsers.filter(
+        (user) =>
+          !hiddenUserIds.has(user.id)
+      ),
+    [hiddenUserIds, projectUsers]
+  );
+  const hiddenProjectUsers = useMemo(
+    () =>
+      projectUsers.filter((user) =>
+        hiddenUserIds.has(user.id)
+      ),
+    [hiddenUserIds, projectUsers]
+  );
 
   const assignments = useMemo(
     () =>
@@ -461,6 +526,16 @@ export default function Timeline() {
       ) ?? [],
     [selectedProject]
   );
+  const visibleAssignments = useMemo(
+    () =>
+      assignments.filter(
+        (assignment) =>
+          !hiddenUserIds.has(
+            assignment.user.id
+          )
+      ),
+    [assignments, hiddenUserIds]
+  );
 
   const completedAssignments =
     assignments.filter(
@@ -469,8 +544,12 @@ export default function Timeline() {
     ).length;
 
   const timelineOptions = useMemo(
-    () => buildTimelineOptions(),
-    []
+    () =>
+      buildTimelineOptions(
+        rangeStartDate,
+        rangeEndDate
+      ),
+    [rangeEndDate, rangeStartDate]
   );
 
   const handleCreateTask = async (
@@ -591,10 +670,15 @@ export default function Timeline() {
     }
 
     const groups =
-      buildTimelineGroups(projectUsers);
+      buildTimelineGroups(visibleProjectUsers);
     const items = [
-      ...buildWeekendItems(assignments),
-      ...buildTimelineItems(assignments)
+      ...buildWeekendItems(
+        rangeStartDate,
+        rangeEndDate
+      ),
+      ...buildTimelineItems(
+        visibleAssignments
+      )
     ];
     const options: TimelineOptions = {
       ...timelineOptions,
@@ -649,10 +733,44 @@ export default function Timeline() {
       handleDoubleClick
     );
 
+    const handleTimelineClick = (
+      event: MouseEvent
+    ) => {
+      const target =
+        event.target as HTMLElement;
+      const hideButton =
+        target.closest<HTMLButtonElement>(
+          ".timeline-user-hide"
+        );
+
+      if (!hideButton?.dataset.userId) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      const userId =
+        hideButton.dataset.userId;
+
+      setHiddenUserIds((currentIds) => {
+        const nextIds = new Set(currentIds);
+        nextIds.add(userId);
+        return nextIds;
+      });
+    };
+
+    container.addEventListener(
+      "click",
+      handleTimelineClick
+    );
+
     const {
       minDate,
       maxDate
-    } = getTimelineWindow(assignments);
+    } = getTimelineWindow(
+      rangeStartDate,
+      rangeEndDate
+    );
 
     timelineRef.current.setWindow(
       minDate,
@@ -667,12 +785,19 @@ export default function Timeline() {
         "doubleClick",
         handleDoubleClick
       );
+      container.removeEventListener(
+        "click",
+        handleTimelineClick
+      );
     };
   }, [
     assignments,
-    projectUsers,
+    rangeEndDate,
+    rangeStartDate,
     selectedProject,
-    timelineOptions
+    timelineOptions,
+    visibleAssignments,
+    visibleProjectUsers
   ]);
 
   useEffect(
@@ -734,18 +859,8 @@ export default function Timeline() {
         "
       >
         <div>
-          <h2
-            className="
-              text-2xl
-              font-bold
-              text-slate-900
-            "
-          >
-            Timeline
-          </h2>
-
           <p className="mt-1 text-sm text-slate-500">
-            View project task assignments by user and estimated dates.
+            Keep your projects on schedule. Monitor workload distribution and track estimated delivery dates across your entire team in one dynamic timeline view.
           </p>
         </div>
 
@@ -930,6 +1045,176 @@ export default function Timeline() {
               </div>
             </div>
           </div>
+
+          <div
+            className="
+              mb-5
+              flex
+              flex-col
+              gap-3
+              rounded-lg
+              bg-slate-50
+              p-3
+              lg:flex-row
+              lg:items-end
+              lg:justify-between
+            "
+          >
+            <div
+              className="
+                grid
+                grid-cols-1
+                gap-3
+                sm:grid-cols-2
+              "
+            >
+              <label className="block">
+                <span
+                  className="
+                    mb-1
+                    block
+                    text-sm
+                    font-medium
+                    text-slate-700
+                  "
+                >
+                  Start
+                </span>
+                <input
+                  type="date"
+                  value={rangeStartDate}
+                  onChange={(event) =>
+                    setRangeStartDate(
+                      event.target.value
+                    )
+                  }
+                  className="
+                    rounded-lg
+                    border
+                    border-slate-300
+                    bg-white
+                    px-3
+                    py-2
+                    text-sm
+                    outline-none
+                    focus:border-slate-900
+                  "
+                />
+              </label>
+
+              <label className="block">
+                <span
+                  className="
+                    mb-1
+                    block
+                    text-sm
+                    font-medium
+                    text-slate-700
+                  "
+                >
+                  End
+                </span>
+                <input
+                  type="date"
+                  value={rangeEndDate}
+                  min={rangeStartDate}
+                  onChange={(event) =>
+                    setRangeEndDate(
+                      event.target.value
+                    )
+                  }
+                  className="
+                    rounded-lg
+                    border
+                    border-slate-300
+                    bg-white
+                    px-3
+                    py-2
+                    text-sm
+                    outline-none
+                    focus:border-slate-900
+                  "
+                />
+              </label>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                const monthRange =
+                  getMonthRange();
+                setRangeStartDate(
+                  monthRange.start
+                );
+                setRangeEndDate(
+                  monthRange.end
+                );
+              }}
+              className="
+                rounded-lg
+                border
+                border-slate-300
+                bg-white
+                px-4
+                py-2
+                text-sm
+                font-medium
+                text-slate-700
+                transition
+                hover:bg-slate-100
+              "
+            >
+              Current month
+            </button>
+          </div>
+
+          {hiddenProjectUsers.length > 0 && (
+            <div
+              className="
+                mb-4
+                flex
+                flex-wrap
+                gap-2
+              "
+            >
+              {hiddenProjectUsers.map((user) => (
+                <button
+                  key={user.id}
+                  type="button"
+                  onClick={() =>
+                    setHiddenUserIds(
+                      (currentIds) => {
+                        const nextIds =
+                          new Set(currentIds);
+                        nextIds.delete(user.id);
+                        return nextIds;
+                      }
+                    )
+                  }
+                  className="
+                    inline-flex
+                    items-center
+                    gap-2
+                    rounded-full
+                    border
+                    border-slate-300
+                    bg-white
+                    px-3
+                    py-1.5
+                    text-xs
+                    font-medium
+                    text-slate-600
+                    transition
+                    hover:bg-slate-100
+                    hover:text-slate-900
+                  "
+                >
+                  <X size={14} />
+                  Show {user.name}
+                </button>
+              ))}
+            </div>
+          )}
 
           {assignments.length === 0 && (
             <div
