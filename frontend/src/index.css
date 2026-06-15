@@ -13,17 +13,47 @@
   color: #64748b;
 }
 
-.timeline-viewer .vis-labelset .vis-label,
-.timeline-viewer .vis-foreground .vis-group {
-  min-height: 56px;
-}
-
 .timeline-viewer .vis-label .vis-inner {
   align-items: center;
   display: flex;
-  min-height: 56px;
   padding-bottom: 0;
   padding-top: 0;
+  width: 100%;
+}
+
+.timeline-user-label {
+  align-items: center;
+  display: flex;
+  gap: 0.625rem;
+  min-width: 0;
+  width: 100%;
+}
+
+.timeline-user-avatar {
+  align-items: center;
+  background-color: #0f172a;
+  border-radius: 9999px;
+  color: #ffffff;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  height: 2.125rem;
+  justify-content: center;
+  letter-spacing: 0;
+  width: 2.125rem;
+}
+
+.timeline-user-name {
+  color: #334155;
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.2;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .timeline-viewer .vis-item {

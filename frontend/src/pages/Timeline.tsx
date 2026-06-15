@@ -77,6 +77,34 @@ function escapeHtml(value: string) {
     .replaceAll("'", "&#039;");
 }
 
+function getUserInitials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+}
+
+function getTimelineUserLabel(user: User) {
+  const initials =
+    getUserInitials(user.name) || "U";
+  const label = document.createElement("div");
+  const avatar = document.createElement("span");
+  const name = document.createElement("span");
+
+  label.className = "timeline-user-label";
+  avatar.className = "timeline-user-avatar";
+  name.className = "timeline-user-name";
+  avatar.textContent = initials;
+  name.textContent = user.name;
+
+  label.append(avatar, name);
+
+  return label;
+}
+
 function addOneDay(date: string) {
   const nextDate = new Date(`${date}T00:00:00`);
   nextDate.setDate(nextDate.getDate() + 1);
@@ -144,7 +172,7 @@ function buildTimelineGroups(
 ): DataGroup[] {
   return users.map((user) => ({
     id: user.id,
-    content: escapeHtml(user.name),
+    content: getTimelineUserLabel(user),
     title: user.email
   }));
 }
@@ -213,12 +241,9 @@ function buildWeekendItems(
   return weekendItems;
 }
 
-function buildTimelineOptions(
-  height: number
-): TimelineOptions {
+function buildTimelineOptions(): TimelineOptions {
   return {
     editable: false,
-    groupHeightMode: "fixed",
     stack: true,
     selectable: true,
     locale: "en",
@@ -229,7 +254,6 @@ function buildTimelineOptions(
     },
     horizontalScroll: true,
     zoomKey: "ctrlKey",
-    height: `${height}px`,
     margin: {
       axis: 18,
       item: {
@@ -351,14 +375,10 @@ export default function Timeline() {
       (assignment) =>
         assignment.status === "DONE"
     ).length;
-  const timelineHeight = Math.max(
-    220,
-    84 + projectUsers.length * 56
-  );
 
   const timelineOptions = useMemo(
-    () => buildTimelineOptions(timelineHeight),
-    [timelineHeight]
+    () => buildTimelineOptions(),
+    []
   );
 
   const handleCreateTask = async (
@@ -789,9 +809,6 @@ export default function Timeline() {
 
           <div
             ref={containerRef}
-            style={{
-              height: timelineHeight
-            }}
             className="
               timeline-viewer
               rounded-lg
