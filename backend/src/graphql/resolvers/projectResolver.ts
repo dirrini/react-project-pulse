@@ -6,7 +6,15 @@ import { GraphQLError } from "graphql";
 import { prisma } from "../../lib/prisma";
 
 const projectInclude = {
-  tasks: true,
+  tasks: {
+    include: {
+      users: {
+        include: {
+          user: true
+        }
+      }
+    }
+  },
   users: {
     include: {
       user: true
@@ -14,10 +22,51 @@ const projectInclude = {
   }
 };
 
+const taskInclude = {
+  users: {
+    include: {
+      user: true
+    }
+  }
+};
+
+function mapTaskUsers<
+  T extends {
+    users?: Array<{
+      user: unknown;
+      estimatedStartDate: Date;
+      estimatedEndDate: Date;
+    }>;
+  }
+>(task: T) {
+  return {
+    ...task,
+    users:
+      task.users?.map((taskUser) => ({
+        ...taskUser,
+        estimatedStartDate:
+          taskUser.estimatedStartDate
+            .toISOString()
+            .slice(0, 10),
+        estimatedEndDate:
+          taskUser.estimatedEndDate
+            .toISOString()
+            .slice(0, 10)
+      })) ?? []
+  };
+}
+
 function mapProjectUsers<
   T extends {
     users?: Array<{
       user: unknown;
+    }>;
+    tasks?: Array<{
+      users?: Array<{
+        user: unknown;
+        estimatedStartDate: Date;
+        estimatedEndDate: Date;
+      }>;
     }>;
   }
 >(project: T | null) {
@@ -27,11 +76,90 @@ function mapProjectUsers<
 
   return {
     ...project,
+    tasks:
+      project.tasks?.map(mapTaskUsers) ??
+      [],
     users:
       project.users?.map(
         (projectUser) => projectUser.user
       ) ?? []
   };
+}
+
+async function ensureTaskUsersBelongToProject(
+  projectId: number,
+  users: Array<{
+    userId: string;
+    estimatedStartDate?: string;
+    estimatedEndDate?: string;
+  }>
+) {
+  if (users.length === 0) {
+    throw new GraphQLError(
+      "At least one task user is required.",
+      {
+        extensions: {
+          code: "BAD_USER_INPUT"
+        }
+      }
+    );
+  }
+
+  const userIds = users.map((user) =>
+    Number(user.userId)
+  );
+  const uniqueUserIds = new Set(userIds);
+
+  if (uniqueUserIds.size !== userIds.length) {
+    throw new GraphQLError(
+      "Task users cannot contain duplicates.",
+      {
+        extensions: {
+          code: "BAD_USER_INPUT"
+        }
+      }
+    );
+  }
+
+  const hasInvalidDates = users.some(
+    (user) =>
+      user.estimatedStartDate &&
+      user.estimatedEndDate &&
+      new Date(user.estimatedStartDate) >
+        new Date(user.estimatedEndDate)
+  );
+
+  if (hasInvalidDates) {
+    throw new GraphQLError(
+      "Estimated end date must be after estimated start date.",
+      {
+        extensions: {
+          code: "BAD_USER_INPUT"
+        }
+      }
+    );
+  }
+
+  const projectUsers =
+    await prisma.projectUser.findMany({
+      where: {
+        projectId,
+        userId: {
+          in: Array.from(uniqueUserIds)
+        }
+      }
+    });
+
+  if (projectUsers.length !== uniqueUserIds.size) {
+    throw new GraphQLError(
+      "Task users must already belong to the project.",
+      {
+        extensions: {
+          code: "BAD_USER_INPUT"
+        }
+      }
+    );
+  }
 }
 
 export const projectResolver = {
@@ -118,23 +246,158 @@ export const projectResolver = {
           title: string;
           description?: string;
           status: string;
+          users: Array<{
+            userId: string;
+            status: string;
+            estimatedStartDate: string;
+            estimatedEndDate: string;
+          }>;
+        };
+      },
+      context: GraphQLContext
+    ) => {
+      requireProjectManager(context);
+      const projectId = Number(
+        args.input.projectId
+      );
+
+      await ensureTaskUsersBelongToProject(
+        projectId,
+        args.input.users
+      );
+
+      const task = await prisma.task.create({
+        data: {
+          title: args.input.title,
+          description:
+            args.input.description,
+          status: args.input.status,
+          projectId,
+          users: {
+            create: args.input.users.map(
+              (user) => ({
+                userId: Number(user.userId),
+                status: user.status,
+                estimatedStartDate:
+                  new Date(
+                    user.estimatedStartDate
+                  ),
+                estimatedEndDate:
+                  new Date(
+                    user.estimatedEndDate
+                  )
+              })
+            )
+          }
+        },
+        include: taskInclude
+      });
+
+      return mapTaskUsers(task);
+    },
+    updateTask: async (
+      _: unknown,
+      args: {
+        id: string;
+        input: {
+          title?: string;
+          description?: string;
+          status?: string;
+          users?: Array<{
+            userId: string;
+            status: string;
+            estimatedStartDate: string;
+            estimatedEndDate: string;
+          }>;
         };
       },
       context: GraphQLContext
     ) => {
       requireProjectManager(context);
 
-      return prisma.task.create({
+      const existingTask =
+        await prisma.task.findUnique({
+          where: {
+            id: Number(args.id)
+          }
+        });
+
+      if (!existingTask) {
+        throw new GraphQLError(
+          "Task not found.",
+          {
+            extensions: {
+              code: "NOT_FOUND"
+            }
+          }
+        );
+      }
+
+      if (args.input.users) {
+        await ensureTaskUsersBelongToProject(
+          existingTask.projectId,
+          args.input.users
+        );
+      }
+
+      await prisma.task.update({
+        where: {
+          id: Number(args.id)
+        },
         data: {
-          title: args.input.title,
-          description:
-            args.input.description,
-          status: args.input.status,
-          projectId: Number(
-            args.input.projectId
-          )
+          ...(args.input.title !== undefined
+            ? {
+                title:
+                  args.input.title.trim()
+              }
+            : {}),
+          ...(args.input.description !== undefined
+            ? {
+                description:
+                  args.input.description
+              }
+            : {}),
+          ...(args.input.status
+            ? { status: args.input.status }
+            : {})
         }
       });
+
+      if (args.input.users) {
+        await prisma.taskUser.deleteMany({
+          where: {
+            taskId: Number(args.id)
+          }
+        });
+
+        await prisma.taskUser.createMany({
+          data: args.input.users.map(
+            (user) => ({
+              taskId: Number(args.id),
+              userId: Number(user.userId),
+              status: user.status,
+              estimatedStartDate:
+                new Date(
+                  user.estimatedStartDate
+                ),
+              estimatedEndDate:
+                new Date(
+                  user.estimatedEndDate
+                )
+            })
+          )
+        });
+      }
+
+      const task =
+        await prisma.task.findUniqueOrThrow({
+          where: {
+            id: Number(args.id)
+          },
+          include: taskInclude
+        });
+
+      return mapTaskUsers(task);
     },
     addProjectUser: async (
       _: unknown,
@@ -211,6 +474,17 @@ export const projectResolver = {
       context: GraphQLContext
     ) => {
       requireProjectManager(context);
+
+      await prisma.taskUser.deleteMany({
+        where: {
+          userId: Number(args.input.userId),
+          task: {
+            projectId: Number(
+              args.input.projectId
+            )
+          }
+        }
+      });
 
       await prisma.projectUser.deleteMany({
         where: {

@@ -3,48 +3,73 @@ import {
   type FormEvent
 } from "react";
 
-import type { TaskStatus }
-  from "../../types/Project";
+import type {
+  Task,
+  TaskStatus
+} from "../../types/Project";
 import type { User }
   from "../../types/User";
 import TaskAssignmentEditor, {
   type TaskAssignmentFormValues
 } from "./TaskAssignmentEditor";
 
-export type CreateTaskFormValues = {
+export type EditTaskFormValues = {
   title: string;
   description: string;
   status: TaskStatus;
   users: TaskAssignmentFormValues[];
 };
 
-interface CreateTaskDialogProps {
-  creating: boolean;
+interface EditTaskDialogProps {
+  task: Task;
+  saving: boolean;
   errorMessage?: string;
   projectUsers: User[];
   onClose: () => void;
-  onCreate: (
-    values: CreateTaskFormValues
+  onSave: (
+    values: EditTaskFormValues
   ) => Promise<void>;
 }
 
-const initialTaskForm: CreateTaskFormValues = {
-  title: "",
-  description: "",
-  status: "TODO",
-  users: []
-};
+function getInitialValues(
+  task: Task
+): EditTaskFormValues {
+  return {
+    title: task.title,
+    description: task.description ?? "",
+    status: task.status,
+    users: task.users.map((taskUser) => ({
+      userId: taskUser.user.id,
+      status: taskUser.status,
+      estimatedStartDate:
+        taskUser.estimatedStartDate,
+      estimatedEndDate:
+        taskUser.estimatedEndDate
+    }))
+  };
+}
 
-export default function CreateTaskDialog({
-  creating,
+export default function EditTaskDialog({
+  task,
+  saving,
   errorMessage,
   projectUsers,
   onClose,
-  onCreate
-}: CreateTaskDialogProps) {
+  onSave
+}: EditTaskDialogProps) {
   const [taskForm, setTaskForm] =
-    useState<CreateTaskFormValues>(
-      initialTaskForm
+    useState<EditTaskFormValues>(() =>
+      getInitialValues(task)
+    );
+
+  const hasInvalidAssignment =
+    taskForm.users.length === 0 ||
+    taskForm.users.some(
+      (user) =>
+        !user.estimatedStartDate ||
+        !user.estimatedEndDate ||
+        user.estimatedStartDate >
+          user.estimatedEndDate
     );
 
   const handleSubmit = async (
@@ -52,7 +77,7 @@ export default function CreateTaskDialog({
   ) => {
     event.preventDefault();
 
-    await onCreate({
+    await onSave({
       ...taskForm,
       title: taskForm.title.trim(),
       description:
@@ -94,7 +119,7 @@ export default function CreateTaskDialog({
           "
         >
           <h3 className="text-xl font-semibold">
-            New task
+            Edit task
           </h3>
 
           <button
@@ -274,16 +299,9 @@ export default function CreateTaskDialog({
             <button
               type="submit"
               disabled={
-                creating ||
+                saving ||
                 !taskForm.title.trim() ||
-                taskForm.users.length === 0 ||
-                taskForm.users.some(
-                  (user) =>
-                    !user.estimatedStartDate ||
-                    !user.estimatedEndDate ||
-                    user.estimatedStartDate >
-                      user.estimatedEndDate
-                )
+                hasInvalidAssignment
               }
               className="
                 rounded-lg
@@ -299,9 +317,9 @@ export default function CreateTaskDialog({
                 disabled:opacity-60
               "
             >
-              {creating
-                ? "Creating..."
-                : "Create task"}
+              {saving
+                ? "Saving..."
+                : "Save task"}
             </button>
           </div>
         </form>

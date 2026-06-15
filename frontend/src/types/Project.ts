@@ -17,6 +17,15 @@ export interface Task {
   description?: string | null;
   status: TaskStatus;
   projectId: string;
+  users: TaskUser[];
+}
+
+export interface TaskUser {
+  id: string;
+  user: User;
+  status: TaskStatus;
+  estimatedStartDate: string;
+  estimatedEndDate: string;
 }
 
 export interface Project {

@@ -15,6 +15,9 @@ import {
 import CreateTaskDialog, {
   type CreateTaskFormValues
 } from "../components/projects/CreateTaskDialog";
+import EditTaskDialog, {
+  type EditTaskFormValues
+} from "../components/projects/EditTaskDialog";
 import StatusBadge from "../components/projects/StatusBadge";
 
 import {
@@ -23,6 +26,7 @@ import {
   PROJECT_QUERY,
   PROJECTS_QUERY,
   REMOVE_PROJECT_USER_MUTATION,
+  UPDATE_TASK_MUTATION,
   UPDATE_PROJECT_MUTATION
 } from "../graphql/queries/projects";
 import {
@@ -94,6 +98,8 @@ export default function ProjectDetails() {
   const { id } = useParams();
   const [isTaskDialogOpen, setIsTaskDialogOpen] =
     useState(false);
+  const [editingTask, setEditingTask] =
+    useState<Task | null>(null);
   const [
     selectedUserId,
     setSelectedUserId
@@ -156,6 +162,23 @@ export default function ProjectDetails() {
     }
   ] = useMutation(
     CREATE_TASK_MUTATION,
+    {
+      refetchQueries: [
+        {
+          query: PROJECT_QUERY,
+          variables: { id }
+        }
+      ]
+    }
+  );
+  const [
+    updateTask,
+    {
+      loading: updatingTask,
+      error: updateTaskError
+    }
+  ] = useMutation(
+    UPDATE_TASK_MUTATION,
     {
       refetchQueries: [
         {
@@ -252,6 +275,22 @@ export default function ProjectDetails() {
     });
 
     setIsTaskDialogOpen(false);
+  };
+
+  const handleUpdateTask = async (
+    values: EditTaskFormValues
+  ) => {
+    if (!editingTask)
+      return;
+
+    await updateTask({
+      variables: {
+        id: editingTask.id,
+        input: values
+      }
+    });
+
+    setEditingTask(null);
   };
 
   const handleAddProjectUser = async () => {
@@ -989,20 +1028,48 @@ export default function ProjectDetails() {
                       {task.title}
                     </h4>
 
-                    <span
-                      className={`
-                        rounded-full
-                        px-3
-                        py-1
-                        text-xs
-                        font-medium
-                        ${taskStatusClasses(
-                          task.status
-                        )}
-                      `}
+                    <div
+                      className="
+                        flex
+                        shrink-0
+                        items-center
+                        gap-2
+                      "
                     >
-                      {formatStatus(task.status)}
-                    </span>
+                      <span
+                        className={`
+                          rounded-full
+                          px-3
+                          py-1
+                          text-xs
+                          font-medium
+                          ${taskStatusClasses(
+                            task.status
+                          )}
+                        `}
+                      >
+                        {formatStatus(task.status)}
+                      </span>
+
+                      {canManageProjects && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setEditingTask(task)
+                          }
+                          className="
+                            rounded-lg
+                            border
+                            px-3
+                            py-1
+                            text-sm
+                            hover:bg-slate-100
+                          "
+                        >
+                          Edit
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {task.description && (
@@ -1015,6 +1082,71 @@ export default function ProjectDetails() {
                       {task.description}
                     </p>
                   )}
+
+                  {task.users.length > 0 && (
+                    <div
+                      className="
+                        mt-4
+                        space-y-2
+                      "
+                    >
+                      {task.users.map(
+                        (taskUser) => (
+                          <div
+                            key={taskUser.id}
+                            className="
+                              grid
+                              grid-cols-1
+                              gap-2
+                              rounded-lg
+                              bg-slate-50
+                              p-3
+                              text-sm
+                              sm:grid-cols-[minmax(0,1fr)_auto_auto]
+                              sm:items-center
+                            "
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate font-medium">
+                                {taskUser.user.name}
+                              </p>
+                              <p className="truncate text-xs text-slate-500">
+                                {taskUser.user.email}
+                              </p>
+                            </div>
+
+                            <span
+                              className={`
+                                w-fit
+                                rounded-full
+                                px-3
+                                py-1
+                                text-xs
+                                font-medium
+                                ${taskStatusClasses(
+                                  taskUser.status
+                                )}
+                              `}
+                            >
+                              {formatStatus(
+                                taskUser.status
+                              )}
+                            </span>
+
+                            <span className="text-xs text-slate-500">
+                              {
+                                taskUser.estimatedStartDate
+                              }{" "}
+                              to{" "}
+                              {
+                                taskUser.estimatedEndDate
+                              }
+                            </span>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -1025,6 +1157,7 @@ export default function ProjectDetails() {
       {isTaskDialogOpen && canManageProjects && (
         <CreateTaskDialog
           creating={creatingTask}
+          projectUsers={projectUsers}
           errorMessage={
             createTaskError
               ? "Could not create task."
@@ -1034,6 +1167,23 @@ export default function ProjectDetails() {
             setIsTaskDialogOpen(false)
           }
           onCreate={handleCreateTask}
+        />
+      )}
+
+      {editingTask && canManageProjects && (
+        <EditTaskDialog
+          task={editingTask}
+          saving={updatingTask}
+          projectUsers={projectUsers}
+          errorMessage={
+            updateTaskError
+              ? "Could not update task."
+              : undefined
+          }
+          onClose={() =>
+            setEditingTask(null)
+          }
+          onSave={handleUpdateTask}
         />
       )}
     </div>

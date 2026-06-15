@@ -18,6 +18,15 @@ export const projectSchema = `#graphql
     description: String
     status: TaskStatus!
     projectId: ID!
+    users: [TaskUser!]!
+  }
+
+  type TaskUser {
+    id: ID!
+    user: User!
+    status: TaskStatus!
+    estimatedStartDate: String!
+    estimatedEndDate: String!
   }
 
   type Project {
@@ -54,6 +63,21 @@ export const projectSchema = `#graphql
     title: String!
     description: String
     status: String!
+    users: [TaskUserInput!]!
+  }
+
+  input UpdateTaskInput {
+    title: String
+    description: String
+    status: String
+    users: [TaskUserInput!]
+  }
+
+  input TaskUserInput {
+    userId: ID!
+    status: String!
+    estimatedStartDate: String!
+    estimatedEndDate: String!
   }
 
   input AddProjectUserInput {
@@ -78,6 +102,11 @@ export const projectSchema = `#graphql
 
     createTask(
       input: CreateTaskInput!
+    ): Task!
+
+    updateTask(
+      id: ID!
+      input: UpdateTaskInput!
     ): Task!
 
     addProjectUser(

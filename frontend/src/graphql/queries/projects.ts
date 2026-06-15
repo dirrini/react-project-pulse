@@ -26,6 +26,18 @@ export const PROJECT_QUERY = gql`
         description
         status
         projectId
+        users {
+          id
+          status
+          estimatedStartDate
+          estimatedEndDate
+          user {
+            id
+            name
+            email
+            role
+          }
+        }
       }
       users {
         id
@@ -63,6 +75,18 @@ export const UPDATE_PROJECT_MUTATION = gql`
         description
         status
         projectId
+        users {
+          id
+          status
+          estimatedStartDate
+          estimatedEndDate
+          user {
+            id
+            name
+            email
+            role
+          }
+        }
       }
       users {
         id
@@ -82,6 +106,42 @@ export const CREATE_TASK_MUTATION = gql`
       description
       status
       projectId
+      users {
+        id
+        status
+        estimatedStartDate
+        estimatedEndDate
+        user {
+          id
+          name
+          email
+          role
+        }
+      }
+    }
+  }
+`;
+
+export const UPDATE_TASK_MUTATION = gql`
+  mutation UpdateTask($id: ID!, $input: UpdateTaskInput!) {
+    updateTask(id: $id, input: $input) {
+      id
+      title
+      description
+      status
+      projectId
+      users {
+        id
+        status
+        estimatedStartDate
+        estimatedEndDate
+        user {
+          id
+          name
+          email
+          role
+        }
+      }
     }
   }
 `;
