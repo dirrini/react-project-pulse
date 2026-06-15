@@ -505,7 +505,7 @@ export default function Timeline() {
       nextEndDate !== currentEndDate;
 
     if (
-      (changedStart && changedEnd) ||
+      (!changedStart && !changedEnd) ||
       nextStartDate > nextEndDate
     ) {
       callback(null);
