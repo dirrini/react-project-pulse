@@ -465,6 +465,20 @@ export default function Timeline() {
           animation: false
         }
       );
+    } else {
+      const today = new Date();
+      const minDate = new Date(today);
+      const maxDate = new Date(today);
+
+      minDate.setDate(minDate.getDate() - 7);
+      maxDate.setDate(maxDate.getDate() + 7);
+      timelineRef.current.setWindow(
+        minDate,
+        maxDate,
+        {
+          animation: false
+        }
+      );
     }
 
     return () => {
@@ -736,9 +750,10 @@ export default function Timeline() {
             </div>
           </div>
 
-          {assignments.length === 0 ? (
+          {assignments.length === 0 && (
             <div
               className="
+                mb-4
                 rounded-xl
                 border
                 border-dashed
@@ -749,43 +764,41 @@ export default function Timeline() {
             >
               No task assignments with estimated dates yet.
             </div>
-          ) : (
-            <>
-              <div
-                className="
-                  mb-4
-                  flex
-                  flex-wrap
-                  gap-3
-                  text-xs
-                  text-slate-600
-                "
-              >
-                <span className="timeline-legend timeline-legend-todo">
-                  To do
-                </span>
-                <span className="timeline-legend timeline-legend-in-progress">
-                  In progress
-                </span>
-                <span className="timeline-legend timeline-legend-done">
-                  Done
-                </span>
-              </div>
-
-              <div
-                ref={containerRef}
-                style={{
-                  height: timelineHeight
-                }}
-                className="
-                  timeline-viewer
-                  rounded-lg
-                  border
-                  border-slate-200
-                "
-              />
-            </>
           )}
+
+          <div
+            className="
+              mb-4
+              flex
+              flex-wrap
+              gap-3
+              text-xs
+              text-slate-600
+            "
+          >
+            <span className="timeline-legend timeline-legend-todo">
+              To do
+            </span>
+            <span className="timeline-legend timeline-legend-in-progress">
+              In progress
+            </span>
+            <span className="timeline-legend timeline-legend-done">
+              Done
+            </span>
+          </div>
+
+          <div
+            ref={containerRef}
+            style={{
+              height: timelineHeight
+            }}
+            className="
+              timeline-viewer
+              rounded-lg
+              border
+              border-slate-200
+            "
+          />
         </section>
       )}
 
