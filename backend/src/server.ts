@@ -10,6 +10,9 @@ import {
 } from "./graphql/context";
 
 async function startServer() {
+  const port = Number(
+    process.env.PORT ?? 4000
+  );
   const apolloServer =
     new ApolloServer<GraphQLContext>({
       typeDefs,
@@ -26,9 +29,9 @@ async function startServer() {
     })
   );
 
-  app.listen(4000, () => {
+  app.listen(port, () => {
     console.log(
-      "🚀 GraphQL running on http://localhost:4000/graphql"
+      `GraphQL running on http://localhost:${port}/graphql`
     );
   });
 }

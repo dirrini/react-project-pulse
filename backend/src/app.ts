@@ -3,6 +3,16 @@ import cors from "cors";
 
 export const app = express();
 
-app.use(cors());
+const corsOrigin = process.env.CORS_ORIGIN;
+
+app.use(
+  cors({
+    origin: corsOrigin || true
+  })
+);
 
 app.use(express.json());
+
+app.get("/health", (_req, res) => {
+  res.status(200).send("ok");
+});

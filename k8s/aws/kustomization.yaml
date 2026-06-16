@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../base
+  - ingress.yaml
+images:
+  - name: projectpulse-api
+    newName: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/projectpulse-api
+    newTag: ${IMAGE_TAG}
+  - name: projectpulse-web
+    newName: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/projectpulse-web
+    newTag: ${IMAGE_TAG}

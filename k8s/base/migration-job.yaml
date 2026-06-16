@@ -1,0 +1,24 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: projectpulse-migrate
+  namespace: projectpulse
+spec:
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: projectpulse-api:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - npx
+            - prisma
+            - migrate
+            - deploy
+          envFrom:
+            - configMapRef:
+                name: projectpulse-config
+            - secretRef:
+                name: projectpulse-secrets
