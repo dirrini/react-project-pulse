@@ -1,0 +1,27 @@
+apiVersion: eks.amazonaws.com/v1
+kind: IngressClassParams
+metadata:
+  name: alb
+spec:
+  scheme: internet-facing
+  ipAddressType: ipv4
+  certificateARNs:
+    - arn:aws:acm:${AWS_REGION}:${AWS_ACCOUNT_ID}:certificate/${ACM_CERTIFICATE_ID}
+  subnets:
+    ids:
+      - ${ALB_SUBNET_1}
+      - ${ALB_SUBNET_2}
+      - ${ALB_SUBNET_3}
+      - ${ALB_SUBNET_4}
+      - ${ALB_SUBNET_5}
+---
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: alb
+spec:
+  controller: eks.amazonaws.com/alb
+  parameters:
+    apiGroup: eks.amazonaws.com
+    kind: IngressClassParams
+    name: alb

@@ -9,18 +9,31 @@ This folder contains a first production-oriented Kubernetes setup for ProjectPul
 
 ## Before Applying
 
-Replace placeholders in:
+The manifests use shell-style placeholders such as `${APP_HOST}` and `${IMAGE_TAG}`.
+Kubernetes and Kustomize do not replace those values automatically. Render them in CI/CD
+or with a local environment-substitution step before applying.
 
-- `k8s/base/configmap.yaml`
-  - `CORS_ORIGIN`
-- `k8s/aws/ingress.yaml`
-  - hostnames
-  - ACM certificate ARN
-- `k8s/aws/kustomization.yaml`
-  - AWS account id
-  - image tags
+Set these production GitHub Environment variables:
 
-Create the production secret manually or with your secret manager:
+- `AWS_ACCOUNT_ID`
+- `AWS_REGION`
+- `AWS_ROLE_TO_ASSUME`
+- `EKS_CLUSTER_NAME`
+- `APP_HOST`
+- `API_HOST`
+- `ACM_CERTIFICATE_ID`
+- `ALB_SUBNET_1`
+- `ALB_SUBNET_2`
+- `ALB_SUBNET_3`
+- `ALB_SUBNET_4`
+- `ALB_SUBNET_5`
+
+Set these production GitHub Environment secrets:
+
+- `DATABASE_URL`
+- `AUTH_SECRET`
+
+For manual deploys, create the production secret manually or with your secret manager:
 
 ```bash
 kubectl create secret generic projectpulse-secrets \
@@ -46,9 +59,10 @@ For EKS, tag and push these images to ECR, then update `k8s/aws/kustomization.ya
 ## Deploy
 
 ```bash
-kubectl apply -f k8s/base/namespace.yaml
-kubectl apply -f k8s/base/secret.example.yaml # only for local testing; replace values first
-kubectl apply -k k8s/aws
+kubectl kustomize k8s/aws \
+  | python3 -c 'import os, sys; print(os.path.expandvars(sys.stdin.read()))' \
+  > rendered.yaml
+kubectl apply -f rendered.yaml
 ```
 
 For production, prefer creating the secret from AWS Secrets Manager or a CI/CD secret store instead of applying `secret.example.yaml`.
