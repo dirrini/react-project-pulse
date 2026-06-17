@@ -1,8 +1,16 @@
-import { useState } from "react";
+import {
+  useMemo,
+  useState
+} from "react";
 import {
   useMutation,
   useQuery
 } from "@apollo/client/react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown
+} from "lucide-react";
 
 import CreateUserDialog, {
   type CreateUserFormValues
@@ -29,6 +37,15 @@ type MeQueryData = {
   } | null;
 };
 
+type SortKey =
+  | "name"
+  | "email"
+  | "role";
+
+type SortDirection =
+  | "asc"
+  | "desc";
+
 function formatRole(role: string) {
   return role
     .replace("_", " ")
@@ -43,6 +60,13 @@ function formatRole(role: string) {
 export default function Users() {
   const [isCreateOpen, setIsCreateOpen] =
     useState(false);
+  const [sortKey, setSortKey] =
+    useState<SortKey>("role");
+  const [
+    sortDirection,
+    setSortDirection
+  ] =
+    useState<SortDirection>("asc");
   const [
     editingUser,
     setEditingUser
@@ -120,7 +144,80 @@ export default function Users() {
     setEditingUser(null);
   };
 
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDirection((current) =>
+        current === "asc"
+          ? "desc"
+          : "asc"
+      );
+      return;
+    }
+
+    setSortKey(key);
+    setSortDirection("asc");
+  };
+
   const users = data?.users ?? [];
+  const rolePriority = {
+    PROJECT_MANAGER: 0,
+    MEMBER: 1,
+    ADMIN: -1
+  };
+  const sortedUsers = useMemo(
+    () =>
+      [...users].sort((a, b) => {
+        let sortValue = 0;
+
+        if (sortKey === "role") {
+          sortValue =
+            (rolePriority[a.role] ?? 99) -
+            (rolePriority[b.role] ?? 99);
+        } else {
+          sortValue =
+            a[sortKey].localeCompare(
+              b[sortKey]
+            );
+        }
+
+        if (sortValue === 0) {
+          sortValue =
+            a.name.localeCompare(b.name);
+        }
+
+        return sortDirection === "asc"
+          ? sortValue
+          : -sortValue;
+      }),
+    [
+      users,
+      sortKey,
+      sortDirection
+    ]
+  );
+
+  const getSortIcon = (key: SortKey) => {
+    if (sortKey !== key) {
+      return (
+        <ArrowUpDown
+          aria-hidden="true"
+          className="h-4 w-4"
+        />
+      );
+    }
+
+    return sortDirection === "asc" ? (
+      <ArrowUp
+        aria-hidden="true"
+        className="h-4 w-4"
+      />
+    ) : (
+      <ArrowDown
+        aria-hidden="true"
+        className="h-4 w-4"
+      />
+    );
+  };
 
   return (
     <div>
@@ -133,15 +230,6 @@ export default function Users() {
         "
       >
         <div>
-          <h2
-            className="
-              text-3xl
-              font-bold
-            "
-          >
-            Users
-          </h2>
-
           <p
             className="
               mt-2
@@ -217,7 +305,27 @@ export default function Users() {
                     text-slate-600
                   "
                 >
-                  Name
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleSort("name")
+                    }
+                    className="
+                      flex
+                      items-center
+                      gap-2
+                      rounded-md
+                      transition
+                      hover:text-slate-900
+                      focus:outline-none
+                      focus:ring-2
+                      focus:ring-slate-300
+                    "
+                    aria-label="Sort users by name"
+                  >
+                    <span>Name</span>
+                    {getSortIcon("name")}
+                  </button>
                 </th>
                 <th
                   className="
@@ -229,7 +337,27 @@ export default function Users() {
                     text-slate-600
                   "
                 >
-                  Email
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleSort("email")
+                    }
+                    className="
+                      flex
+                      items-center
+                      gap-2
+                      rounded-md
+                      transition
+                      hover:text-slate-900
+                      focus:outline-none
+                      focus:ring-2
+                      focus:ring-slate-300
+                    "
+                    aria-label="Sort users by email"
+                  >
+                    <span>Email</span>
+                    {getSortIcon("email")}
+                  </button>
                 </th>
                 <th
                   className="
@@ -241,13 +369,32 @@ export default function Users() {
                     text-slate-600
                   "
                 >
-                  Role
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleSort("role")
+                    }
+                    className="
+                      flex
+                      items-center
+                      gap-2
+                      rounded-md
+                      transition
+                      hover:text-slate-900
+                      focus:outline-none
+                      focus:ring-2
+                      focus:ring-slate-300
+                    "
+                    aria-label="Sort users by role"
+                  >
+                    <span>Role</span>
+                    {getSortIcon("role")}
+                  </button>
                 </th>
               </tr>
             </thead>
-
             <tbody>
-              {users.map((user) => (
+              {sortedUsers.map((user) => (
                 <tr
                   key={user.id}
                   onClick={() =>
