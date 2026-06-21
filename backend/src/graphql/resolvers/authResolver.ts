@@ -23,7 +23,7 @@ export const authResolver = {
       _: unknown,
       __: unknown,
       context: GraphQLContext
-    ) => context.currentUser,
+    ) => requireAuth(context),
 
     users: async (
       _: unknown,

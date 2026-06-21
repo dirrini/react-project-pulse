@@ -1,8 +1,18 @@
 import { prisma } from "../../lib/prisma";
+import {
+  requireAuth,
+  type GraphQLContext
+} from "../context";
 
 export const dashboardResolver = {
   Query: {
-    dashboardStats: async () => {
+    dashboardStats: async (
+      _: unknown,
+      __: unknown,
+      context: GraphQLContext
+    ) => {
+      requireAuth(context);
+
       const [
         totalProjects,
         totalTasks,

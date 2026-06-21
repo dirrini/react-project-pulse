@@ -1,5 +1,6 @@
 import {
   requireAuth,
+  requireUserManager,
   requireProjectManager,
   type GraphQLContext
 } from "../context";
@@ -165,7 +166,12 @@ async function ensureTaskUsersBelongToProject(
 
 export const projectResolver = {
   Query: {
-    projects: async () => {
+    projects: async (
+      _: unknown,
+      __: unknown,
+      context: GraphQLContext
+    ) => {
+      requireAuth(context);
       const projects =
         await prisma.project.findMany({
           include: projectInclude
@@ -177,8 +183,11 @@ export const projectResolver = {
       _: unknown,
       args: {
         id: string;
-      }
+      },
+      context: GraphQLContext
     ) => {
+      requireAuth(context);
+
       const project =
         await prisma.project.findUnique({
         where: {
