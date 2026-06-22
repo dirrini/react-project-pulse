@@ -139,7 +139,11 @@ export default function ProjectDetails() {
         id
       },
       skip: !id,
-      fetchPolicy: "cache-and-network"
+      fetchPolicy: "cache-and-network",
+      pollInterval:
+        section === "products"
+          ? 5000
+          : 0
     }
   );
   const { data: meData } =
