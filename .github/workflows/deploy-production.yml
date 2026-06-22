@@ -95,8 +95,20 @@ jobs:
 
       - name: Run database migrations
         run: |
-          kubectl wait --for=condition=complete job/projectpulse-migrate -n projectpulse --timeout=180s
-          kubectl logs job/projectpulse-migrate -n projectpulse
+          kubectl wait --for=create job/projectpulse-migrate -n projectpulse --timeout=60s
+
+          if ! kubectl wait --for=condition=complete job/projectpulse-migrate -n projectpulse --timeout=420s; then
+            echo "Migration job did not complete. Showing diagnostics."
+            kubectl get job projectpulse-migrate -n projectpulse -o wide
+            kubectl get pods -n projectpulse -l job-name=projectpulse-migrate -o wide
+            kubectl describe job projectpulse-migrate -n projectpulse
+            kubectl describe pods -n projectpulse -l job-name=projectpulse-migrate
+            kubectl logs job/projectpulse-migrate -n projectpulse --all-containers=true --tail=200 || true
+            kubectl get events -n projectpulse --sort-by=.lastTimestamp | tail -50
+            exit 1
+          fi
+
+          kubectl logs job/projectpulse-migrate -n projectpulse --all-containers=true
 
       - name: Check rollouts
         run: |
