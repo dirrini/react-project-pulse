@@ -20,7 +20,8 @@ const projectInclude = {
     include: {
       user: true
     }
-  }
+  },
+  products: true
 };
 
 const taskInclude = {
@@ -109,6 +110,19 @@ function mapTaskUsers<
   };
 }
 
+function mapProduct<
+  T extends {
+    deliveryDate: Date;
+  }
+>(product: T) {
+  return {
+    ...product,
+    deliveryDate: product.deliveryDate
+      .toISOString()
+      .slice(0, 10)
+  };
+}
+
 function mapProjectUsers<
   T extends {
     users?: Array<{
@@ -121,6 +135,9 @@ function mapProjectUsers<
         estimatedEndDate: Date;
       }>;
     }>;
+    products?: Array<{
+      deliveryDate: Date;
+    }>;
   }
 >(project: T | null) {
   if (!project) {
@@ -131,6 +148,9 @@ function mapProjectUsers<
     ...project,
     tasks:
       project.tasks?.map(mapTaskUsers) ??
+      [],
+    products:
+      project.products?.map(mapProduct) ??
       [],
     users:
       project.users?.map(
@@ -206,6 +226,45 @@ async function ensureTaskUsersBelongToProject(
   if (projectUsers.length !== uniqueUserIds.size) {
     throw new GraphQLError(
       "Task users must already belong to the project.",
+      {
+        extensions: {
+          code: "BAD_USER_INPUT"
+        }
+      }
+    );
+  }
+}
+
+function validateProductInput(input: {
+  status?: string;
+  vendor?: string;
+  materialCode?: string;
+  quantity?: number;
+  materialDescription?: string;
+  deliveryDate?: string;
+}) {
+  if (
+    input.quantity !== undefined &&
+    input.quantity <= 0
+  ) {
+    throw new GraphQLError(
+      "Quantity must be greater than zero.",
+      {
+        extensions: {
+          code: "BAD_USER_INPUT"
+        }
+      }
+    );
+  }
+
+  if (
+    input.deliveryDate !== undefined &&
+    Number.isNaN(
+      new Date(input.deliveryDate).getTime()
+    )
+  ) {
+    throw new GraphQLError(
+      "Delivery date is invalid.",
       {
         extensions: {
           code: "BAD_USER_INPUT"
@@ -639,6 +698,180 @@ export const projectResolver = {
         });
 
       return mapProjectUsers(project);
+    },
+    createProduct: async (
+      _: unknown,
+      args: {
+        input: {
+          projectId: string;
+          status: string;
+          vendor: string;
+          materialCode: string;
+          quantity: number;
+          materialDescription: string;
+          deliveryDate: string;
+        };
+      },
+      context: GraphQLContext
+    ) => {
+      const projectId = Number(
+        args.input.projectId
+      );
+
+      await ensureCanManageProject(
+        projectId,
+        context
+      );
+      validateProductInput(args.input);
+
+      const product =
+        await prisma.product.create({
+          data: {
+            projectId,
+            status:
+              args.input.status.trim(),
+            vendor:
+              args.input.vendor.trim(),
+            materialCode:
+              args.input.materialCode.trim(),
+            quantity:
+              args.input.quantity,
+            materialDescription:
+              args.input.materialDescription.trim(),
+            deliveryDate:
+              new Date(
+                args.input.deliveryDate
+              )
+          }
+        });
+
+      return mapProduct(product);
+    },
+    updateProduct: async (
+      _: unknown,
+      args: {
+        id: string;
+        input: {
+          status?: string;
+          vendor?: string;
+          materialCode?: string;
+          quantity?: number;
+          materialDescription?: string;
+          deliveryDate?: string;
+        };
+      },
+      context: GraphQLContext
+    ) => {
+      const existingProduct =
+        await prisma.product.findUnique({
+          where: {
+            id: Number(args.id)
+          }
+        });
+
+      if (!existingProduct) {
+        throw new GraphQLError(
+          "Product not found.",
+          {
+            extensions: {
+              code: "NOT_FOUND"
+            }
+          }
+        );
+      }
+
+      await ensureCanManageProject(
+        existingProduct.projectId,
+        context
+      );
+      validateProductInput(args.input);
+
+      const product =
+        await prisma.product.update({
+          where: {
+            id: Number(args.id)
+          },
+          data: {
+            ...(args.input.status !== undefined
+              ? {
+                  status:
+                    args.input.status.trim()
+                }
+              : {}),
+            ...(args.input.vendor !== undefined
+              ? {
+                  vendor:
+                    args.input.vendor.trim()
+                }
+              : {}),
+            ...(args.input.materialCode !== undefined
+              ? {
+                  materialCode:
+                    args.input.materialCode.trim()
+                }
+              : {}),
+            ...(args.input.quantity !== undefined
+              ? {
+                  quantity:
+                    args.input.quantity
+                }
+              : {}),
+            ...(args.input.materialDescription !== undefined
+              ? {
+                  materialDescription:
+                    args.input.materialDescription.trim()
+                }
+              : {}),
+            ...(args.input.deliveryDate !== undefined
+              ? {
+                  deliveryDate:
+                    new Date(
+                      args.input.deliveryDate
+                    )
+                }
+              : {})
+          }
+        });
+
+      return mapProduct(product);
+    },
+    deleteProduct: async (
+      _: unknown,
+      args: {
+        id: string;
+      },
+      context: GraphQLContext
+    ) => {
+      const existingProduct =
+        await prisma.product.findUnique({
+          where: {
+            id: Number(args.id)
+          }
+        });
+
+      if (!existingProduct) {
+        throw new GraphQLError(
+          "Product not found.",
+          {
+            extensions: {
+              code: "NOT_FOUND"
+            }
+          }
+        );
+      }
+
+      await ensureCanManageProject(
+        existingProduct.projectId,
+        context
+      );
+
+      await prisma.product.delete({
+        where: {
+          id: Number(args.id)
+        }
+      });
+
+      return true;
     }
   }
 
