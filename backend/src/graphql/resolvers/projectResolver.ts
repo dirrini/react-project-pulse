@@ -1,6 +1,5 @@
 import {
   requireAuth,
-  requireUserManager,
   requireProjectManager,
   type GraphQLContext
 } from "../context";
@@ -31,6 +30,58 @@ const taskInclude = {
     }
   }
 };
+
+function projectScopeWhere(
+  currentUser: {
+    id: number;
+    role: string;
+  }
+) {
+  if (currentUser.role === "PROJECT_MANAGER") {
+    return {
+      users: {
+        some: {
+          userId: currentUser.id
+        }
+      }
+    };
+  }
+
+  return {
+    id: -1
+  };
+}
+
+async function ensureCanManageProject(
+  projectId: number,
+  context: GraphQLContext
+) {
+  const currentUser =
+    requireProjectManager(context);
+
+  const projectUser =
+    await prisma.projectUser.findUnique({
+      where: {
+        projectId_userId: {
+          projectId,
+          userId: currentUser.id
+        }
+      }
+    });
+
+  if (!projectUser) {
+    throw new GraphQLError(
+      "Project management access required.",
+      {
+        extensions: {
+          code: "FORBIDDEN"
+        }
+      }
+    );
+  }
+
+  return currentUser;
+}
 
 function mapTaskUsers<
   T extends {
@@ -171,9 +222,12 @@ export const projectResolver = {
       __: unknown,
       context: GraphQLContext
     ) => {
-      requireAuth(context);
+      const currentUser =
+        requireAuth(context);
       const projects =
         await prisma.project.findMany({
+          where:
+            projectScopeWhere(currentUser),
           include: projectInclude
         });
 
@@ -186,12 +240,18 @@ export const projectResolver = {
       },
       context: GraphQLContext
     ) => {
-      requireAuth(context);
+      const currentUser =
+        requireAuth(context);
 
       const project =
-        await prisma.project.findUnique({
+        await prisma.project.findFirst({
         where: {
-          id: Number(args.id)
+          AND: [
+            {
+              id: Number(args.id)
+            },
+            projectScopeWhere(currentUser)
+          ]
         },
         include: projectInclude
       });
@@ -284,7 +344,10 @@ export const projectResolver = {
       },
       context: GraphQLContext
     ) => {
-      requireProjectManager(context);
+      await ensureCanManageProject(
+        Number(args.id),
+        context
+      );
 
       const project =
         await prisma.project.update({
@@ -315,9 +378,13 @@ export const projectResolver = {
       },
       context: GraphQLContext
     ) => {
-      requireProjectManager(context);
       const projectId = Number(
         args.input.projectId
+      );
+
+      await ensureCanManageProject(
+        projectId,
+        context
       );
 
       await ensureTaskUsersBelongToProject(
@@ -372,8 +439,6 @@ export const projectResolver = {
       },
       context: GraphQLContext
     ) => {
-      requireProjectManager(context);
-
       const existingTask =
         await prisma.task.findUnique({
           where: {
@@ -391,6 +456,11 @@ export const projectResolver = {
           }
         );
       }
+
+      await ensureCanManageProject(
+        existingTask.projectId,
+        context
+      );
 
       if (args.input.users) {
         await ensureTaskUsersBelongToProject(
@@ -468,7 +538,10 @@ export const projectResolver = {
       },
       context: GraphQLContext
     ) => {
-      requireProjectManager(context);
+      await ensureCanManageProject(
+        Number(args.input.projectId),
+        context
+      );
 
       const user =
         await prisma.user.findUnique({
@@ -532,7 +605,10 @@ export const projectResolver = {
       },
       context: GraphQLContext
     ) => {
-      requireProjectManager(context);
+      await ensureCanManageProject(
+        Number(args.input.projectId),
+        context
+      );
 
       await prisma.taskUser.deleteMany({
         where: {

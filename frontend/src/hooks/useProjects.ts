@@ -10,6 +10,9 @@ type ProjectsQueryData = {
 
 export function useProjects() {
   return useQuery<ProjectsQueryData>(
-    PROJECTS_QUERY
+    PROJECTS_QUERY,
+    {
+      fetchPolicy: "cache-and-network"
+    }
   );
 }
