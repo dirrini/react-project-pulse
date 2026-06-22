@@ -58,9 +58,13 @@ export const dashboardResolver = {
             status: "DONE"
           }
         }),
-        prisma.projectUser.count({
+        prisma.projectUser.findMany({
           where: {
             project: projectWhere
+          },
+          distinct: ["userId"],
+          select: {
+            userId: true
           }
         })
       ]);
@@ -69,7 +73,7 @@ export const dashboardResolver = {
         totalProjects,
         totalTasks,
         completedTasks,
-        teamMembers
+        teamMembers: teamMembers.length
       };
     }
   }
