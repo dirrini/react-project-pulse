@@ -35,6 +35,10 @@ export const router =
           element: <ProjectDetails />
         },
         {
+          path: "projects/:id/:section",
+          element: <ProjectDetails />
+        },
+        {
           path: "timeline",
           element: <Timeline />
         },

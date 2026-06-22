@@ -253,11 +253,19 @@ export const projectResolver = {
       },
       context: GraphQLContext
     ) => {
-      requireProjectManager(context);
+      const currentUser =
+        requireProjectManager(context);
 
       const project =
         await prisma.project.create({
-        data: args.input,
+        data: {
+          ...args.input,
+          users: {
+            create: {
+              userId: currentUser.id
+            }
+          }
+        },
         include: projectInclude
       });
 

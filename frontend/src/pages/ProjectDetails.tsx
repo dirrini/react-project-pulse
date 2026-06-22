@@ -49,6 +49,7 @@ type ProjectQueryData = {
 
 type MeQueryData = {
   me: {
+    id: string;
     role: string;
   } | null;
 };
@@ -95,7 +96,10 @@ function taskStatusClasses(
 }
 
 export default function ProjectDetails() {
-  const { id } = useParams();
+  const {
+    id,
+    section
+  } = useParams();
   const [isTaskDialogOpen, setIsTaskDialogOpen] =
     useState(false);
   const [editingTask, setEditingTask] =
@@ -125,13 +129,18 @@ export default function ProjectDetails() {
   );
   const { data: meData } =
     useQuery<MeQueryData>(ME_QUERY);
-  const canManageProjects =
+  const projectUsers =
+    data?.project?.users ?? [];
+  const canManageCurrentProject =
     meData?.me?.role === "ADMIN" ||
-    meData?.me?.role ===
-      "PROJECT_MANAGER";
+    projectUsers.some(
+      (user) =>
+        user.id === meData?.me?.id &&
+        user.role === "PROJECT_MANAGER"
+    );
   const { data: usersData } =
     useQuery<UsersQueryData>(USERS_QUERY, {
-      skip: !canManageProjects,
+      skip: !canManageCurrentProject,
       fetchPolicy: "cache-and-network"
     });
 
@@ -362,7 +371,11 @@ export default function ProjectDetails() {
 
   const project = data.project;
   const tasks = project.tasks ?? [];
-  const projectUsers = project.users ?? [];
+  const activeSection =
+    section === "users" ||
+    section === "tasks"
+      ? section
+      : "overview";
   const projectManagers =
     projectUsers.filter(
       (user) =>
@@ -434,7 +447,8 @@ export default function ProjectDetails() {
           </p>
         </div>
 
-        {canManageProjects && (
+        {activeSection === "tasks" &&
+          canManageCurrentProject && (
           <button
             type="button"
             onClick={() =>
@@ -457,15 +471,143 @@ export default function ProjectDetails() {
         )}
       </div>
 
-      <div
+      <nav
         className="
-          grid
-          grid-cols-1
-          gap-6
-          xl:grid-cols-[minmax(0,420px)_1fr]
+          mb-6
+          flex
+          flex-wrap
+          gap-2
+          border-b
+          pb-3
         "
       >
-        {canManageProjects && (
+        <Link
+          to={`/projects/${id}`}
+          className={`
+            rounded-lg
+            px-4
+            py-2
+            text-sm
+            font-medium
+            transition
+            ${
+              activeSection === "overview"
+                ? "bg-slate-900 text-white"
+                : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+            }
+          `}
+        >
+          Overview
+        </Link>
+
+        {canManageCurrentProject && (
+          <>
+            <Link
+              to={`/projects/${id}/users`}
+              className={`
+                rounded-lg
+                px-4
+                py-2
+                text-sm
+                font-medium
+                transition
+                ${
+                  activeSection === "users"
+                    ? "bg-slate-900 text-white"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                }
+              `}
+            >
+              Users
+            </Link>
+
+            <Link
+              to={`/projects/${id}/tasks`}
+              className={`
+                rounded-lg
+                px-4
+                py-2
+                text-sm
+                font-medium
+                transition
+                ${
+                  activeSection === "tasks"
+                    ? "bg-slate-900 text-white"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                }
+              `}
+            >
+              Tasks
+            </Link>
+          </>
+        )}
+      </nav>
+
+      <div
+        className="
+          space-y-6
+        "
+      >
+        {activeSection === "overview" && (
+          <section
+            className="
+              rounded-xl
+              border
+              bg-white
+              p-5
+              shadow-sm
+            "
+          >
+            <h3
+              className="
+                mb-4
+                text-lg
+                font-semibold
+              "
+            >
+              Project information
+            </h3>
+
+            <div
+              className="
+                grid
+                grid-cols-1
+                gap-4
+                sm:grid-cols-3
+              "
+            >
+              <div>
+                <p className="text-sm text-slate-500">
+                  Status
+                </p>
+                <p className="font-medium">
+                  {formatStatus(project.status)}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm text-slate-500">
+                  Progress
+                </p>
+                <p className="font-medium">
+                  {project.progress}%
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm text-slate-500">
+                  Assigned users
+                </p>
+                <p className="font-medium">
+                  {projectUsers.length}
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {activeSection === "overview" &&
+          canManageCurrentProject && (
           <form
             onSubmit={handleUpdateProject}
             className="
@@ -697,6 +839,8 @@ export default function ProjectDetails() {
           </form>
         )}
 
+        {activeSection === "users" &&
+          canManageCurrentProject && (
         <section>
           <div
             className="
@@ -728,7 +872,7 @@ export default function ProjectDetails() {
                 Project users
               </h3>
 
-              {canManageProjects && (
+              {canManageCurrentProject && (
                 <div
                   className="
                     flex
@@ -856,7 +1000,7 @@ export default function ProjectDetails() {
                             </p>
                           </div>
 
-                          {canManageProjects && (
+                          {canManageCurrentProject && (
                             <button
                               type="button"
                               disabled={removingUser}
@@ -926,7 +1070,7 @@ export default function ProjectDetails() {
                           </p>
                         </div>
 
-                        {canManageProjects && (
+                        {canManageCurrentProject && (
                           <button
                             type="button"
                             disabled={removingUser}
@@ -956,7 +1100,12 @@ export default function ProjectDetails() {
               </div>
             </div>
           </div>
+        </section>
+          )}
 
+        {activeSection === "tasks" &&
+          canManageCurrentProject && (
+        <section>
           <div
             className="
               mb-4
@@ -1051,7 +1200,7 @@ export default function ProjectDetails() {
                         {formatStatus(task.status)}
                       </span>
 
-                      {canManageProjects && (
+                      {canManageCurrentProject && (
                         <button
                           type="button"
                           onClick={() =>
@@ -1152,9 +1301,26 @@ export default function ProjectDetails() {
             </div>
           )}
         </section>
+          )}
+
+        {activeSection !== "overview" &&
+          !canManageCurrentProject && (
+          <div
+            className="
+              rounded-xl
+              border
+              bg-white
+              p-10
+              text-center
+              text-slate-500
+            "
+          >
+            This section is only available to project managers of this project.
+          </div>
+        )}
       </div>
 
-      {isTaskDialogOpen && canManageProjects && (
+      {isTaskDialogOpen && canManageCurrentProject && (
         <CreateTaskDialog
           creating={creatingTask}
           projectUsers={projectUsers}
@@ -1170,7 +1336,7 @@ export default function ProjectDetails() {
         />
       )}
 
-      {editingTask && canManageProjects && (
+      {editingTask && canManageCurrentProject && (
         <EditTaskDialog
           task={editingTask}
           saving={updatingTask}
