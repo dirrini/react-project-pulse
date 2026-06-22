@@ -42,6 +42,7 @@ export interface Product {
 
 export interface Project {
   id: string;
+  externalCode?: string | null;
   name: string;
   description: string;
   progress: number;

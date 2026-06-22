@@ -31,6 +31,7 @@ export const projectSchema = `#graphql
 
   type Project {
     id: ID!
+    externalCode: String
     name: String!
     description: String!
     progress: Int!
@@ -59,6 +60,7 @@ export const projectSchema = `#graphql
   }
 
   input CreateProjectInput {
+    externalCode: String
     name: String!
     description: String!
     progress: Int!
@@ -66,6 +68,7 @@ export const projectSchema = `#graphql
   }
 
   input UpdateProjectInput {
+    externalCode: String
     name: String
     description: String
     progress: Int
@@ -123,6 +126,17 @@ export const projectSchema = `#graphql
     deliveryDate: String
   }
 
+  input UpsertExternalProductInput {
+    projectExternalCode: String!
+    externalCode: String!
+    status: String!
+    vendor: String!
+    materialCode: String!
+    quantity: Float!
+    materialDescription: String!
+    deliveryDate: String!
+  }
+
   type Mutation {
     createProject(
       input: CreateProjectInput!
@@ -162,6 +176,10 @@ export const projectSchema = `#graphql
     deleteProduct(
       id: ID!
     ): Boolean!
+
+    upsertExternalProduct(
+      input: UpsertExternalProductInput!
+    ): Product!
   }
 
 `;

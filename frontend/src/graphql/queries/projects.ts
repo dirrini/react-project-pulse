@@ -4,6 +4,7 @@ export const PROJECTS_QUERY = gql`
   query Projects {
     projects {
       id
+      externalCode
       name
       description
       progress
@@ -16,6 +17,7 @@ export const PROJECT_QUERY = gql`
   query Project($id: ID!) {
     project(id: $id) {
       id
+      externalCode
       name
       description
       progress
@@ -64,6 +66,7 @@ export const CREATE_PROJECT_MUTATION = gql`
   mutation CreateProject($input: CreateProjectInput!) {
     createProject(input: $input) {
       id
+      externalCode
       name
       description
       progress
@@ -76,6 +79,7 @@ export const UPDATE_PROJECT_MUTATION = gql`
   mutation UpdateProject($id: ID!, $input: UpdateProjectInput!) {
     updateProject(id: $id, input: $input) {
       id
+      externalCode
       name
       description
       progress

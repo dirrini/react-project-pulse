@@ -9,6 +9,7 @@ datasource db {
 
 model Project {
   id          Int      @id @default(autoincrement())
+  externalCode String? @unique
   name        String
   description String
   progress    Int
@@ -17,6 +18,7 @@ model Project {
   tasks       Task[]
   users       ProjectUser[]
   products    Product[]
+  integrationClients IntegrationClientProject[]
 }
 
 model Task {
@@ -78,4 +80,28 @@ model Product {
   projectId           Int
   project             Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   createdAt           DateTime @default(now())
+
+  @@unique([projectId, externalCode])
+}
+
+model IntegrationClient {
+  id        Int      @id @default(autoincrement())
+  name      String
+  keyHash   String   @unique
+  scopes    String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  lastUsedAt DateTime?
+  projects  IntegrationClientProject[]
+}
+
+model IntegrationClientProject {
+  id                  Int      @id @default(autoincrement())
+  integrationClientId Int
+  projectId           Int
+  integrationClient   IntegrationClient @relation(fields: [integrationClientId], references: [id], onDelete: Cascade)
+  project             Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt           DateTime @default(now())
+
+  @@unique([integrationClientId, projectId])
 }

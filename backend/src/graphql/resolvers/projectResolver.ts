@@ -1,5 +1,6 @@
 import {
   requireAuth,
+  requireIntegrationScope,
   requireProjectManager,
   type GraphQLContext
 } from "../context";
@@ -274,6 +275,32 @@ function validateProductInput(input: {
   }
 }
 
+async function ensureIntegrationCanAccessProject(
+  integrationClientId: number,
+  projectId: number
+) {
+  const integrationProject =
+    await prisma.integrationClientProject.findUnique({
+      where: {
+        integrationClientId_projectId: {
+          integrationClientId,
+          projectId
+        }
+      }
+    });
+
+  if (!integrationProject) {
+    throw new GraphQLError(
+      "Integration project access required.",
+      {
+        extensions: {
+          code: "FORBIDDEN"
+        }
+      }
+    );
+  }
+}
+
 export const projectResolver = {
   Query: {
     projects: async (
@@ -365,6 +392,7 @@ export const projectResolver = {
       args: {
         input: {
           name: string;
+          externalCode?: string | null;
           description: string;
           progress: number;
           status: string;
@@ -379,6 +407,9 @@ export const projectResolver = {
         await prisma.project.create({
         data: {
           ...args.input,
+          externalCode:
+            args.input.externalCode?.trim() ||
+            null,
           users: {
             create: {
               userId: currentUser.id
@@ -396,6 +427,7 @@ export const projectResolver = {
         id: string;
         input: {
           name?: string;
+          externalCode?: string | null;
           description?: string;
           progress?: number;
           status?: string;
@@ -413,7 +445,16 @@ export const projectResolver = {
         where: {
           id: Number(args.id)
         },
-        data: args.input,
+        data: {
+          ...args.input,
+          ...(args.input.externalCode !== undefined
+            ? {
+                externalCode:
+                  args.input.externalCode?.trim() ||
+                  null
+              }
+            : {})
+        },
         include: projectInclude
       });
 
@@ -872,6 +913,115 @@ export const projectResolver = {
       });
 
       return true;
+    },
+    upsertExternalProduct: async (
+      _: unknown,
+      args: {
+        input: {
+          projectExternalCode: string;
+          externalCode: string;
+          status: string;
+          vendor: string;
+          materialCode: string;
+          quantity: number;
+          materialDescription: string;
+          deliveryDate: string;
+        };
+      },
+      context: GraphQLContext
+    ) => {
+      const integrationClient =
+        requireIntegrationScope(
+          context,
+          "products:write"
+        );
+
+      validateProductInput(args.input);
+
+      const project =
+        await prisma.project.findUnique({
+          where: {
+            externalCode:
+              args.input.projectExternalCode
+                .trim()
+          }
+        });
+
+      if (!project) {
+        throw new GraphQLError(
+          "Project not found.",
+          {
+            extensions: {
+              code: "NOT_FOUND"
+            }
+          }
+        );
+      }
+
+      await ensureIntegrationCanAccessProject(
+        integrationClient.id,
+        project.id
+      );
+
+      const externalCode =
+        args.input.externalCode.trim();
+
+      if (!externalCode) {
+        throw new GraphQLError(
+          "External code is required.",
+          {
+            extensions: {
+              code: "BAD_USER_INPUT"
+            }
+          }
+        );
+      }
+
+      const product =
+        await prisma.product.upsert({
+          where: {
+            projectId_externalCode: {
+              projectId: project.id,
+              externalCode
+            }
+          },
+          update: {
+            status:
+              args.input.status.trim(),
+            vendor:
+              args.input.vendor.trim(),
+            materialCode:
+              args.input.materialCode.trim(),
+            quantity:
+              args.input.quantity,
+            materialDescription:
+              args.input.materialDescription.trim(),
+            deliveryDate:
+              new Date(
+                args.input.deliveryDate
+              )
+          },
+          create: {
+            projectId: project.id,
+            externalCode,
+            status:
+              args.input.status.trim(),
+            vendor:
+              args.input.vendor.trim(),
+            materialCode:
+              args.input.materialCode.trim(),
+            quantity:
+              args.input.quantity,
+            materialDescription:
+              args.input.materialDescription.trim(),
+            deliveryDate:
+              new Date(
+                args.input.deliveryDate
+              )
+          }
+        });
+
+      return mapProduct(product);
     }
   }
 

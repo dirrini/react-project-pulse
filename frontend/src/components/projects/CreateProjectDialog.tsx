@@ -7,6 +7,7 @@ import type { ProjectStatus }
   from "../../types/Project";
 
 export type CreateProjectFormValues = {
+  externalCode?: string | null;
   name: string;
   description: string;
   progress: number;
@@ -23,6 +24,7 @@ interface CreateProjectDialogProps {
 }
 
 const initialProjectForm: CreateProjectFormValues = {
+  externalCode: "",
   name: "",
   description: "",
   progress: 0,
@@ -47,6 +49,9 @@ export default function CreateProjectDialog({
 
     await onCreate({
       ...projectForm,
+      externalCode:
+        projectForm.externalCode?.trim() ||
+        null,
       name: projectForm.name.trim(),
       description:
         projectForm.description.trim(),
@@ -139,6 +144,42 @@ export default function CreateProjectDialog({
                 setProjectForm({
                   ...projectForm,
                   name: event.target.value
+                })
+              }
+              className="
+                w-full
+                rounded-lg
+                border
+                border-slate-300
+                px-3
+                py-2
+                outline-none
+                focus:border-slate-900
+              "
+            />
+          </label>
+
+          <label className="block">
+            <span
+              className="
+                mb-1
+                block
+                text-sm
+                font-medium
+                text-slate-700
+              "
+            >
+              External project code
+            </span>
+            <input
+              value={
+                projectForm.externalCode ?? ""
+              }
+              onChange={(event) =>
+                setProjectForm({
+                  ...projectForm,
+                  externalCode:
+                    event.target.value
                 })
               }
               className="

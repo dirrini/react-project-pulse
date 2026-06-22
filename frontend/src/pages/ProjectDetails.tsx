@@ -66,6 +66,7 @@ type UsersQueryData = {
 };
 
 type ProjectFormState = {
+  externalCode: string;
   name: string;
   description: string;
   progress: number;
@@ -73,6 +74,7 @@ type ProjectFormState = {
 };
 
 const emptyProjectForm: ProjectFormState = {
+  externalCode: "",
   name: "",
   description: "",
   progress: 0,
@@ -301,6 +303,8 @@ export default function ProjectDetails() {
       return;
 
     setProjectForm({
+      externalCode:
+        data.project.externalCode ?? "",
       name: data.project.name,
       description:
         data.project.description,
@@ -320,6 +324,9 @@ export default function ProjectDetails() {
         id,
         input: {
           ...projectForm,
+          externalCode:
+            projectForm.externalCode.trim() ||
+            null,
           name: projectForm.name.trim(),
           description:
             projectForm.description.trim(),
@@ -731,9 +738,20 @@ export default function ProjectDetails() {
                 grid
                 grid-cols-1
                 gap-4
-                sm:grid-cols-3
+                sm:grid-cols-2
+                xl:grid-cols-4
               "
             >
+              <div>
+                <p className="text-sm text-slate-500">
+                  External code
+                </p>
+                <p className="font-medium">
+                  {project.externalCode ??
+                    "Not linked"}
+                </p>
+              </div>
+
               <div>
                 <p className="text-sm text-slate-500">
                   Status
@@ -806,6 +824,42 @@ export default function ProjectDetails() {
                   setProjectForm({
                     ...projectForm,
                     name: event.target.value
+                  })
+                }
+                className="
+                  w-full
+                  rounded-lg
+                  border
+                  border-slate-300
+                  px-3
+                  py-2
+                  outline-none
+                  focus:border-slate-900
+                "
+              />
+            </label>
+
+            <label className="block">
+              <span
+                className="
+                  mb-1
+                  block
+                  text-sm
+                  font-medium
+                  text-slate-700
+                "
+              >
+                External project code
+              </span>
+              <input
+                value={
+                  projectForm.externalCode
+                }
+                onChange={(event) =>
+                  setProjectForm({
+                    ...projectForm,
+                    externalCode:
+                      event.target.value
                   })
                 }
                 className="
