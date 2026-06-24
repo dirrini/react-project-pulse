@@ -18,14 +18,20 @@ import CreateTaskDialog, {
 import EditTaskDialog, {
   type EditTaskFormValues
 } from "../components/projects/EditTaskDialog";
+import ProductDialog, {
+  type ProductFormValues
+} from "../components/projects/ProductDialog";
 import StatusBadge from "../components/projects/StatusBadge";
 
 import {
   ADD_PROJECT_USER_MUTATION,
+  CREATE_PRODUCT_MUTATION,
   CREATE_TASK_MUTATION,
+  DELETE_PRODUCT_MUTATION,
   PROJECT_QUERY,
   PROJECTS_QUERY,
   REMOVE_PROJECT_USER_MUTATION,
+  UPDATE_PRODUCT_MUTATION,
   UPDATE_TASK_MUTATION,
   UPDATE_PROJECT_MUTATION
 } from "../graphql/queries/projects";
@@ -37,6 +43,7 @@ import {
 import type {
   Project,
   ProjectStatus,
+  Product,
   Task,
   TaskStatus
 } from "../types/Project";
@@ -59,6 +66,7 @@ type UsersQueryData = {
 };
 
 type ProjectFormState = {
+  externalCode: string;
   name: string;
   description: string;
   progress: number;
@@ -66,6 +74,7 @@ type ProjectFormState = {
 };
 
 const emptyProjectForm: ProjectFormState = {
+  externalCode: "",
   name: "",
   description: "",
   progress: 0,
@@ -104,6 +113,12 @@ export default function ProjectDetails() {
     useState(false);
   const [editingTask, setEditingTask] =
     useState<Task | null>(null);
+  const [isProductDialogOpen, setIsProductDialogOpen] =
+    useState(false);
+  const [
+    editingProduct,
+    setEditingProduct
+  ] = useState<Product | null>(null);
   const [
     selectedUserId,
     setSelectedUserId
@@ -124,7 +139,11 @@ export default function ProjectDetails() {
         id
       },
       skip: !id,
-      fetchPolicy: "cache-and-network"
+      fetchPolicy: "cache-and-network",
+      pollInterval:
+        section === "products"
+          ? 5000
+          : 0
     }
   );
   const { data: meData } =
@@ -231,12 +250,65 @@ export default function ProjectDetails() {
       ]
     }
   );
+  const [
+    createProduct,
+    {
+      loading: creatingProduct,
+      error: createProductError
+    }
+  ] = useMutation(
+    CREATE_PRODUCT_MUTATION,
+    {
+      refetchQueries: [
+        {
+          query: PROJECT_QUERY,
+          variables: { id }
+        }
+      ]
+    }
+  );
+  const [
+    updateProduct,
+    {
+      loading: updatingProduct,
+      error: updateProductError
+    }
+  ] = useMutation(
+    UPDATE_PRODUCT_MUTATION,
+    {
+      refetchQueries: [
+        {
+          query: PROJECT_QUERY,
+          variables: { id }
+        }
+      ]
+    }
+  );
+  const [
+    deleteProduct,
+    {
+      loading: deletingProduct,
+      error: deleteProductError
+    }
+  ] = useMutation(
+    DELETE_PRODUCT_MUTATION,
+    {
+      refetchQueries: [
+        {
+          query: PROJECT_QUERY,
+          variables: { id }
+        }
+      ]
+    }
+  );
 
   useEffect(() => {
     if (!data?.project)
       return;
 
     setProjectForm({
+      externalCode:
+        data.project.externalCode ?? "",
       name: data.project.name,
       description:
         data.project.description,
@@ -256,6 +328,9 @@ export default function ProjectDetails() {
         id,
         input: {
           ...projectForm,
+          externalCode:
+            projectForm.externalCode.trim() ||
+            null,
           name: projectForm.name.trim(),
           description:
             projectForm.description.trim(),
@@ -334,6 +409,56 @@ export default function ProjectDetails() {
     });
   };
 
+  const handleCreateProduct = async (
+    values: ProductFormValues
+  ) => {
+    await createProduct({
+      variables: {
+        input: {
+          ...values,
+          projectId: id
+        }
+      }
+    });
+
+    setIsProductDialogOpen(false);
+  };
+
+  const handleUpdateProduct = async (
+    values: ProductFormValues
+  ) => {
+    if (!editingProduct)
+      return;
+
+    await updateProduct({
+      variables: {
+        id: editingProduct.id,
+        input: values
+      }
+    });
+
+    setEditingProduct(null);
+  };
+
+  const handleDeleteProduct = async (
+    productId: string
+  ) => {
+    const shouldDelete =
+      window.confirm(
+        "Delete this product from the project?"
+      );
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    await deleteProduct({
+      variables: {
+        id: productId
+      }
+    });
+  };
+
   if (loading && !data?.project) {
     return <p>Loading project...</p>;
   }
@@ -371,9 +496,11 @@ export default function ProjectDetails() {
 
   const project = data.project;
   const tasks = project.tasks ?? [];
+  const products = project.products ?? [];
   const activeSection =
     section === "users" ||
-    section === "tasks"
+    section === "tasks" ||
+    section === "products"
       ? section
       : "overview";
   const projectManagers =
@@ -469,6 +596,29 @@ export default function ProjectDetails() {
             New task
           </button>
         )}
+
+        {activeSection === "products" &&
+          canManageCurrentProject && (
+          <button
+            type="button"
+            onClick={() =>
+              setIsProductDialogOpen(true)
+            }
+            className="
+              rounded-lg
+              bg-slate-900
+              px-4
+              py-2
+              text-sm
+              font-medium
+              text-white
+              transition
+              hover:bg-slate-700
+            "
+          >
+            New product
+          </button>
+        )}
       </div>
 
       <nav
@@ -539,6 +689,25 @@ export default function ProjectDetails() {
             >
               Tasks
             </Link>
+
+            <Link
+              to={`/projects/${id}/products`}
+              className={`
+                rounded-lg
+                px-4
+                py-2
+                text-sm
+                font-medium
+                transition
+                ${
+                  activeSection === "products"
+                    ? "bg-slate-900 text-white"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                }
+              `}
+            >
+              Products
+            </Link>
           </>
         )}
       </nav>
@@ -573,9 +742,20 @@ export default function ProjectDetails() {
                 grid
                 grid-cols-1
                 gap-4
-                sm:grid-cols-3
+                sm:grid-cols-2
+                xl:grid-cols-4
               "
             >
+              <div>
+                <p className="text-sm text-slate-500">
+                  External code
+                </p>
+                <p className="font-medium">
+                  {project.externalCode ??
+                    "Not linked"}
+                </p>
+              </div>
+
               <div>
                 <p className="text-sm text-slate-500">
                   Status
@@ -648,6 +828,42 @@ export default function ProjectDetails() {
                   setProjectForm({
                     ...projectForm,
                     name: event.target.value
+                  })
+                }
+                className="
+                  w-full
+                  rounded-lg
+                  border
+                  border-slate-300
+                  px-3
+                  py-2
+                  outline-none
+                  focus:border-slate-900
+                "
+              />
+            </label>
+
+            <label className="block">
+              <span
+                className="
+                  mb-1
+                  block
+                  text-sm
+                  font-medium
+                  text-slate-700
+                "
+              >
+                External project code
+              </span>
+              <input
+                value={
+                  projectForm.externalCode
+                }
+                onChange={(event) =>
+                  setProjectForm({
+                    ...projectForm,
+                    externalCode:
+                      event.target.value
                   })
                 }
                 className="
@@ -1303,6 +1519,206 @@ export default function ProjectDetails() {
         </section>
           )}
 
+        {activeSection === "products" &&
+          canManageCurrentProject && (
+        <section>
+          <div
+            className="
+              mb-4
+              flex
+              items-center
+              justify-between
+            "
+          >
+            <h3 className="text-lg font-semibold">
+              Products
+            </h3>
+
+            <span className="text-sm text-slate-500">
+              {products.length} products
+            </span>
+          </div>
+
+          {deleteProductError && (
+            <p className="mb-4 text-sm text-red-600">
+              Could not delete product.
+            </p>
+          )}
+
+          {products.length === 0 ? (
+            <div
+              className="
+                rounded-xl
+                border
+                bg-white
+                p-10
+                text-center
+                text-slate-500
+              "
+            >
+              No products yet.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {products.map((product) => (
+                <div
+                  key={product.id}
+                  className="
+                    rounded-xl
+                    border
+                    bg-white
+                    p-4
+                    shadow-sm
+                  "
+                >
+                  <div
+                    className="
+                      mb-3
+                      flex
+                      flex-col
+                      gap-3
+                      lg:flex-row
+                      lg:items-start
+                      lg:justify-between
+                    "
+                  >
+                    <div className="min-w-0">
+                      <div
+                        className="
+                          mb-2
+                          flex
+                          flex-wrap
+                          items-center
+                          gap-2
+                        "
+                      >
+                        <h4 className="font-semibold text-slate-900">
+                          {product.materialCode}
+                        </h4>
+
+                        <span
+                          className="
+                            rounded-full
+                            bg-slate-100
+                            px-3
+                            py-1
+                            text-xs
+                            font-medium
+                            text-slate-700
+                          "
+                        >
+                          {product.status}
+                        </span>
+                      </div>
+
+                      <p className="text-sm text-slate-600">
+                        {product.materialDescription}
+                      </p>
+                    </div>
+
+                    <div
+                      className="
+                        flex
+                        shrink-0
+                        gap-2
+                      "
+                    >
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditingProduct(product)
+                        }
+                        className="
+                          rounded-lg
+                          border
+                          px-3
+                          py-1
+                          text-sm
+                          hover:bg-slate-100
+                        "
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={deletingProduct}
+                        onClick={() =>
+                          handleDeleteProduct(
+                            product.id
+                          )
+                        }
+                        className="
+                          rounded-lg
+                          border
+                          px-3
+                          py-1
+                          text-sm
+                          text-red-600
+                          hover:bg-red-50
+                          disabled:cursor-not-allowed
+                          disabled:opacity-60
+                        "
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+
+                  <div
+                    className="
+                      grid
+                      grid-cols-1
+                      gap-3
+                      text-sm
+                      sm:grid-cols-2
+                      xl:grid-cols-4
+                    "
+                  >
+                    <div>
+                      <p className="text-xs text-slate-500">
+                        SAP external code
+                      </p>
+                      <p className="font-medium">
+                        {product.externalCode ??
+                          "Pending SAP"}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-slate-500">
+                        Vendor
+                      </p>
+                      <p className="font-medium">
+                        {product.vendor}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-slate-500">
+                        Quantity
+                      </p>
+                      <p className="font-medium">
+                        {product.quantity}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-slate-500">
+                        Delivery date
+                      </p>
+                      <p className="font-medium">
+                        {product.deliveryDate}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+          )}
+
         {activeSection !== "overview" &&
           !canManageCurrentProject && (
           <div
@@ -1350,6 +1766,41 @@ export default function ProjectDetails() {
             setEditingTask(null)
           }
           onSave={handleUpdateTask}
+        />
+      )}
+
+      {isProductDialogOpen &&
+        canManageCurrentProject && (
+        <ProductDialog
+          title="New product"
+          saving={creatingProduct}
+          errorMessage={
+            createProductError
+              ? "Could not create product."
+              : undefined
+          }
+          onClose={() =>
+            setIsProductDialogOpen(false)
+          }
+          onSave={handleCreateProduct}
+        />
+      )}
+
+      {editingProduct &&
+        canManageCurrentProject && (
+        <ProductDialog
+          title="Edit product"
+          product={editingProduct}
+          saving={updatingProduct}
+          errorMessage={
+            updateProductError
+              ? "Could not update product."
+              : undefined
+          }
+          onClose={() =>
+            setEditingProduct(null)
+          }
+          onSave={handleUpdateProduct}
         />
       )}
     </div>

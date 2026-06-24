@@ -28,12 +28,26 @@ export interface TaskUser {
   estimatedEndDate: string;
 }
 
+export interface Product {
+  id: string;
+  externalCode?: string | null;
+  status: string;
+  vendor: string;
+  materialCode: string;
+  quantity: number;
+  materialDescription: string;
+  deliveryDate: string;
+  projectId: string;
+}
+
 export interface Project {
   id: string;
+  externalCode?: string | null;
   name: string;
   description: string;
   progress: number;
   status: ProjectStatus;
   tasks?: Task[];
   users?: User[];
+  products?: Product[];
 }

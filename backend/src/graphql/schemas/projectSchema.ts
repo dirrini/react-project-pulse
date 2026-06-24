@@ -31,12 +31,26 @@ export const projectSchema = `#graphql
 
   type Project {
     id: ID!
+    externalCode: String
     name: String!
     description: String!
     progress: Int!
     status: ProjectStatus!
     tasks: [Task!]!
     users: [User!]!
+    products: [Product!]!
+  }
+
+  type Product {
+    id: ID!
+    externalCode: String
+    status: String!
+    vendor: String!
+    materialCode: String!
+    quantity: Float!
+    materialDescription: String!
+    deliveryDate: String!
+    projectId: ID!
   }
 
   extend type Query {
@@ -46,6 +60,7 @@ export const projectSchema = `#graphql
   }
 
   input CreateProjectInput {
+    externalCode: String
     name: String!
     description: String!
     progress: Int!
@@ -53,6 +68,7 @@ export const projectSchema = `#graphql
   }
 
   input UpdateProjectInput {
+    externalCode: String
     name: String
     description: String
     progress: Int
@@ -91,6 +107,36 @@ export const projectSchema = `#graphql
     userId: ID!
   }
 
+  input CreateProductInput {
+    projectId: ID!
+    status: String!
+    vendor: String!
+    materialCode: String!
+    quantity: Float!
+    materialDescription: String!
+    deliveryDate: String!
+  }
+
+  input UpdateProductInput {
+    status: String
+    vendor: String
+    materialCode: String
+    quantity: Float
+    materialDescription: String
+    deliveryDate: String
+  }
+
+  input UpsertExternalProductInput {
+    projectExternalCode: String!
+    externalCode: String!
+    status: String!
+    vendor: String!
+    materialCode: String!
+    quantity: Float!
+    materialDescription: String!
+    deliveryDate: String!
+  }
+
   type Mutation {
     createProject(
       input: CreateProjectInput!
@@ -117,6 +163,23 @@ export const projectSchema = `#graphql
     removeProjectUser(
       input: RemoveProjectUserInput!
     ): Project!
+
+    createProduct(
+      input: CreateProductInput!
+    ): Product!
+
+    updateProduct(
+      id: ID!
+      input: UpdateProductInput!
+    ): Product!
+
+    deleteProduct(
+      id: ID!
+    ): Boolean!
+
+    upsertExternalProduct(
+      input: UpsertExternalProductInput!
+    ): Product!
   }
 
 `;

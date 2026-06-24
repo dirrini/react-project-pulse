@@ -1,4 +1,5 @@
 import {
+  createHash,
   createHmac,
   randomBytes,
   scryptSync,
@@ -175,4 +176,12 @@ export function verifyAuthToken(
     userId: payload.userId,
     role: payload.role
   };
+}
+
+export function hashApiKey(
+  apiKey: string
+) {
+  return createHash("sha256")
+    .update(apiKey)
+    .digest("hex");
 }

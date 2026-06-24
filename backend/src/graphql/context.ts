@@ -1,13 +1,22 @@
 import type { Request } from "express";
-import type { User } from "@prisma/client";
+import type {
+  IntegrationClient,
+  User
+} from "@prisma/client";
 import { GraphQLError } from "graphql";
 
-import { verifyAuthToken }
+import {
+  hashApiKey,
+  verifyAuthToken
+}
   from "../lib/auth";
 import { prisma } from "../lib/prisma";
 
 export type GraphQLContext = {
   currentUser: User | null;
+  currentIntegration:
+    | IntegrationClient
+    | null;
 };
 
 export function requireAuth(
@@ -93,6 +102,40 @@ export function requireProjectManager(
   return currentUser;
 }
 
+export function requireIntegrationScope(
+  context: GraphQLContext,
+  requiredScope: string
+) {
+  if (!context.currentIntegration) {
+    throw new GraphQLError(
+      "Integration authentication required.",
+      {
+        extensions: {
+          code: "UNAUTHENTICATED"
+        }
+      }
+    );
+  }
+
+  const scopes =
+    context.currentIntegration.scopes
+      .split(/[,\s]+/)
+      .filter(Boolean);
+
+  if (!scopes.includes(requiredScope)) {
+    throw new GraphQLError(
+      "Integration scope required.",
+      {
+        extensions: {
+          code: "FORBIDDEN"
+        }
+      }
+    );
+  }
+
+  return context.currentIntegration;
+}
+
 function getTokenFromRequest(req: Request) {
   const authorization =
     req.headers.authorization;
@@ -123,26 +166,52 @@ export async function createGraphQLContext(
 
   if (!token) {
     return {
-      currentUser: null
+      currentUser: null,
+      currentIntegration: null
     };
   }
 
   const payload = verifyAuthToken(token);
 
-  if (!payload) {
+  if (payload) {
+    const currentUser =
+      await prisma.user.findUnique({
+        where: {
+          id: payload.userId
+        }
+      });
+
     return {
-      currentUser: null
+      currentUser,
+      currentIntegration: null
     };
   }
 
-  const currentUser =
-    await prisma.user.findUnique({
+  const currentIntegration =
+    await prisma.integrationClient.findUnique({
       where: {
-        id: payload.userId
+        keyHash: hashApiKey(token)
       }
     });
 
+  if (!currentIntegration?.isActive) {
+    return {
+      currentUser: null,
+      currentIntegration: null
+    };
+  }
+
+  await prisma.integrationClient.update({
+    where: {
+      id: currentIntegration.id
+    },
+    data: {
+      lastUsedAt: new Date()
+    }
+  });
+
   return {
-    currentUser
+    currentUser: null,
+    currentIntegration
   };
 }
