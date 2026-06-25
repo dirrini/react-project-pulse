@@ -74,6 +74,11 @@ jobs:
             -n projectpulse \
             --from-literal=DATABASE_URL="${{ secrets.DATABASE_URL }}" \
             --from-literal=AUTH_SECRET="${{ secrets.AUTH_SECRET }}" \
+            --from-literal=SEED_INTEGRATION_CLIENT_ID="${{ secrets.SEED_INTEGRATION_CLIENT_ID }}" \
+            --from-literal=SEED_INTEGRATION_CLIENT_SECRET="${{ secrets.SEED_INTEGRATION_CLIENT_SECRET }}" \
+            --from-literal=SEED_INTEGRATION_NAME="${{ vars.SEED_INTEGRATION_NAME }}" \
+            --from-literal=SEED_INTEGRATION_SCOPES="${{ vars.SEED_INTEGRATION_SCOPES }}" \
+            --from-literal=SEED_INTEGRATION_PROJECT_EXTERNAL_CODE="${{ vars.SEED_INTEGRATION_PROJECT_EXTERNAL_CODE }}" \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Render Kubernetes manifests

@@ -13,10 +13,9 @@ spec:
           image: projectpulse-api:latest
           imagePullPolicy: IfNotPresent
           command:
-            - npx
-            - prisma
-            - migrate
-            - deploy
+            - sh
+            - -c
+            - npx prisma migrate deploy && npx tsx prisma/seed.ts
           envFrom:
             - configMapRef:
                 name: projectpulse-config
