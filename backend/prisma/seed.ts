@@ -65,36 +65,64 @@ async function main() {
     });
   }
 
-  const integrationApiKey =
+  const integrationClientSecret =
+    process.env.SEED_INTEGRATION_CLIENT_SECRET ??
     process.env.SEED_INTEGRATION_API_KEY;
 
-  if (integrationApiKey) {
+  if (integrationClientSecret) {
+    const integrationClientId =
+      process.env.SEED_INTEGRATION_CLIENT_ID ??
+      "sap-purchase-orders";
     const integrationName =
       process.env.SEED_INTEGRATION_NAME ??
       "SAP Purchase Orders";
     const integrationScopes =
       process.env.SEED_INTEGRATION_SCOPES ??
       "products:write";
-    const integrationClient =
-      await prisma.integrationClient.upsert({
+
+    const existingIntegrationClient =
+      await prisma.integrationClient.findFirst({
         where: {
-          keyHash: hashApiKey(
-            integrationApiKey
-          )
-        },
-        update: {
-          name: integrationName,
-          scopes: integrationScopes,
-          isActive: true
-        },
-        create: {
-          name: integrationName,
-          keyHash: hashApiKey(
-            integrationApiKey
-          ),
-          scopes: integrationScopes
+          OR: [
+            {
+              clientId:
+                integrationClientId
+            },
+            {
+              keyHash: hashApiKey(
+                integrationClientSecret
+              )
+            }
+          ]
         }
       });
+
+    const integrationClient =
+      existingIntegrationClient
+        ? await prisma.integrationClient.update({
+            where: {
+              id: existingIntegrationClient.id
+            },
+            data: {
+              clientId: integrationClientId,
+              keyHash: hashApiKey(
+                integrationClientSecret
+              ),
+              name: integrationName,
+              scopes: integrationScopes,
+              isActive: true
+            }
+          })
+        : await prisma.integrationClient.create({
+            data: {
+              clientId: integrationClientId,
+              name: integrationName,
+              keyHash: hashApiKey(
+                integrationClientSecret
+              ),
+              scopes: integrationScopes
+            }
+          });
 
     const projectExternalCode =
       process.env

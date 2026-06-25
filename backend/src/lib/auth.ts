@@ -11,9 +11,17 @@ type AuthTokenPayload = {
   role: string;
 };
 
+type IntegrationTokenPayload = {
+  integrationClientId: number;
+  scopes: string;
+  type: "integration";
+};
+
 const passwordKeyLength = 64;
 const tokenExpirationMs =
   1000 * 60 * 60 * 24;
+const integrationTokenExpirationMs =
+  1000 * 60 * 15;
 
 function base64UrlEncode(value: string) {
   return Buffer.from(value)
@@ -175,6 +183,109 @@ export function verifyAuthToken(
   return {
     userId: payload.userId,
     role: payload.role
+  };
+}
+
+export function createIntegrationToken(
+  payload: IntegrationTokenPayload
+) {
+  const header = base64UrlEncode(
+    JSON.stringify({
+      alg: "HS256",
+      typ: "JWT"
+    })
+  );
+  const tokenPayload = base64UrlEncode(
+    JSON.stringify({
+      ...payload,
+      exp: Math.floor(
+        (Date.now() +
+          integrationTokenExpirationMs) /
+          1000
+      )
+    })
+  );
+  const signature = sign(
+    `${header}.${tokenPayload}`
+  );
+
+  return {
+    accessToken:
+      `${header}.${tokenPayload}.${signature}`,
+    expiresAt: new Date(
+      Date.now() +
+        integrationTokenExpirationMs
+    ).toISOString()
+  };
+}
+
+export function verifyIntegrationToken(
+  token: string
+): IntegrationTokenPayload | null {
+  const [
+    header,
+    encodedPayload,
+    signature
+  ] = token.split(".");
+
+  if (
+    !header ||
+    !encodedPayload ||
+    !signature
+  ) {
+    return null;
+  }
+
+  const expectedSignature =
+    sign(`${header}.${encodedPayload}`);
+  const signatureBuffer =
+    Buffer.from(signature);
+  const expectedSignatureBuffer =
+    Buffer.from(expectedSignature);
+
+  if (
+    signatureBuffer.length !==
+      expectedSignatureBuffer.length ||
+    !timingSafeEqual(
+      signatureBuffer,
+      expectedSignatureBuffer
+    )
+  ) {
+    return null;
+  }
+
+  let payload:
+    | (IntegrationTokenPayload & {
+        exp: number;
+      })
+    | null = null;
+
+  try {
+    payload = JSON.parse(
+      base64UrlDecode(encodedPayload)
+    ) as IntegrationTokenPayload & {
+      exp: number;
+    };
+  } catch {
+    return null;
+  }
+
+  if (
+    payload.type !== "integration" ||
+    typeof payload.integrationClientId !==
+      "number" ||
+    typeof payload.scopes !== "string" ||
+    typeof payload.exp !== "number" ||
+    payload.exp * 1000 < Date.now()
+  ) {
+    return null;
+  }
+
+  return {
+    integrationClientId:
+      payload.integrationClientId,
+    scopes: payload.scopes,
+    type: "integration"
   };
 }
 

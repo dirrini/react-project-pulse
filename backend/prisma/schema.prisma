@@ -86,6 +86,7 @@ model Product {
 
 model IntegrationClient {
   id        Int      @id @default(autoincrement())
+  clientId  String?  @unique
   name      String
   keyHash   String   @unique
   scopes    String

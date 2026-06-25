@@ -7,6 +7,7 @@ import { GraphQLError } from "graphql";
 
 import {
   hashApiKey,
+  verifyIntegrationToken,
   verifyAuthToken
 }
   from "../lib/auth";
@@ -184,6 +185,40 @@ export async function createGraphQLContext(
     return {
       currentUser,
       currentIntegration: null
+    };
+  }
+
+  const integrationToken =
+    verifyIntegrationToken(token);
+
+  if (integrationToken) {
+    const currentIntegration =
+      await prisma.integrationClient.findUnique({
+        where: {
+          id: integrationToken
+            .integrationClientId
+        }
+      });
+
+    if (!currentIntegration?.isActive) {
+      return {
+        currentUser: null,
+        currentIntegration: null
+      };
+    }
+
+    await prisma.integrationClient.update({
+      where: {
+        id: currentIntegration.id
+      },
+      data: {
+        lastUsedAt: new Date()
+      }
+    });
+
+    return {
+      currentUser: null,
+      currentIntegration
     };
   }
 
