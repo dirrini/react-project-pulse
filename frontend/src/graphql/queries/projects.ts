@@ -124,6 +124,12 @@ export const UPDATE_PROJECT_MUTATION = gql`
   }
 `;
 
+export const DELETE_PROJECT_MUTATION = gql`
+  mutation DeleteProject($id: ID!) {
+    deleteProject(id: $id)
+  }
+`;
+
 export const CREATE_TASK_MUTATION = gql`
   mutation CreateTask($input: CreateTaskInput!) {
     createTask(input: $input) {

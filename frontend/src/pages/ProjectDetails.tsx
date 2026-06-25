@@ -5,6 +5,7 @@ import {
 } from "react";
 import {
   Link,
+  useNavigate,
   useParams
 } from "react-router-dom";
 import {
@@ -28,6 +29,7 @@ import {
   CREATE_PRODUCT_MUTATION,
   CREATE_TASK_MUTATION,
   DELETE_PRODUCT_MUTATION,
+  DELETE_PROJECT_MUTATION,
   PROJECT_QUERY,
   PROJECTS_QUERY,
   REMOVE_PROJECT_USER_MUTATION,
@@ -105,6 +107,7 @@ function taskStatusClasses(
 }
 
 export default function ProjectDetails() {
+  const navigate = useNavigate();
   const {
     id,
     section
@@ -177,6 +180,20 @@ export default function ProjectDetails() {
           query: PROJECT_QUERY,
           variables: { id }
         },
+        { query: PROJECTS_QUERY }
+      ]
+    }
+  );
+  const [
+    deleteProject,
+    {
+      loading: deletingProject,
+      error: deleteProjectError
+    }
+  ] = useMutation(
+    DELETE_PROJECT_MUTATION,
+    {
+      refetchQueries: [
         { query: PROJECTS_QUERY }
       ]
     }
@@ -344,6 +361,28 @@ export default function ProjectDetails() {
         }
       }
     });
+  };
+
+  const handleDeleteProject = async () => {
+    if (!id)
+      return;
+
+    const shouldDelete =
+      window.confirm(
+        "Delete this project and all related tasks, products, and assignments?"
+      );
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    await deleteProject({
+      variables: {
+        id
+      }
+    });
+
+    navigate("/projects");
   };
 
   const handleCreateTask = async (
@@ -727,15 +766,62 @@ export default function ProjectDetails() {
               shadow-sm
             "
           >
-            <h3
+            <div
               className="
                 mb-4
-                text-lg
-                font-semibold
+                flex
+                items-center
+                justify-between
+                gap-3
               "
             >
-              Project information
-            </h3>
+              <h3
+                className="
+                  text-lg
+                  font-semibold
+                "
+              >
+                Project information
+              </h3>
+
+              {canManageCurrentProject && (
+                <button
+                  type="button"
+                  onClick={handleDeleteProject}
+                  disabled={deletingProject}
+                  className="
+                    rounded-lg
+                    border
+                    border-red-200
+                    px-3
+                    py-1.5
+                    text-sm
+                    font-medium
+                    text-red-600
+                    transition
+                    hover:bg-red-50
+                    disabled:cursor-not-allowed
+                    disabled:opacity-60
+                  "
+                >
+                  {deletingProject
+                    ? "Deleting..."
+                    : "Delete project"}
+                </button>
+              )}
+            </div>
+
+            {deleteProjectError && (
+              <p
+                className="
+                  mb-4
+                  text-sm
+                  text-red-600
+                "
+              >
+                Could not delete project.
+              </p>
+            )}
 
             <div
               className="

@@ -147,6 +147,10 @@ export const projectSchema = `#graphql
       input: UpdateProjectInput!
     ): Project!
 
+    deleteProject(
+      id: ID!
+    ): Boolean!
+
     createTask(
       input: CreateTaskInput!
     ): Task!

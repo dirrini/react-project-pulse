@@ -301,6 +301,49 @@ async function ensureIntegrationCanAccessProject(
   }
 }
 
+function hasIntegrationScope(
+  scopes: string,
+  requiredScope: string
+) {
+  return scopes
+    .split(/[,\s]+/)
+    .filter(Boolean)
+    .includes(requiredScope);
+}
+
+async function enableProductIntegrationsForProject(
+  projectId: number
+) {
+  const integrationClients =
+    await prisma.integrationClient.findMany({
+      where: {
+        isActive: true
+      }
+    });
+
+  const productIntegrationClients =
+    integrationClients.filter((client) =>
+      hasIntegrationScope(
+        client.scopes,
+        "products:write"
+      )
+    );
+
+  if (productIntegrationClients.length === 0) {
+    return;
+  }
+
+  await prisma.integrationClientProject.createMany({
+    data: productIntegrationClients.map(
+      (client) => ({
+        integrationClientId: client.id,
+        projectId
+      })
+    ),
+    skipDuplicates: true
+  });
+}
+
 export const projectResolver = {
   Query: {
     projects: async (
@@ -419,6 +462,12 @@ export const projectResolver = {
         include: projectInclude
       });
 
+      if (project.externalCode) {
+        await enableProductIntegrationsForProject(
+          project.id
+        );
+      }
+
       return mapProjectUsers(project);
     },
     updateProject: async (
@@ -458,7 +507,64 @@ export const projectResolver = {
         include: projectInclude
       });
 
+      if (project.externalCode) {
+        await enableProductIntegrationsForProject(
+          project.id
+        );
+      }
+
       return mapProjectUsers(project);
+    },
+    deleteProject: async (
+      _: unknown,
+      args: {
+        id: string;
+      },
+      context: GraphQLContext
+    ) => {
+      const projectId = Number(args.id);
+
+      await ensureCanManageProject(
+        projectId,
+        context
+      );
+
+      await prisma.$transaction([
+        prisma.taskUser.deleteMany({
+          where: {
+            task: {
+              projectId
+            }
+          }
+        }),
+        prisma.task.deleteMany({
+          where: {
+            projectId
+          }
+        }),
+        prisma.product.deleteMany({
+          where: {
+            projectId
+          }
+        }),
+        prisma.integrationClientProject.deleteMany({
+          where: {
+            projectId
+          }
+        }),
+        prisma.projectUser.deleteMany({
+          where: {
+            projectId
+          }
+        }),
+        prisma.project.delete({
+          where: {
+            id: projectId
+          }
+        })
+      ]);
+
+      return true;
     },
     createTask: async (
       _: unknown,
