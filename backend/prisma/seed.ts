@@ -1,11 +1,34 @@
 import { PrismaClient } from "@prisma/client";
-
-import { hashPassword }
-  from "../src/lib/auth";
-import { hashApiKey }
-  from "../src/lib/auth";
+import {
+  createHash,
+  randomBytes,
+  scryptSync
+} from "node:crypto";
 
 const prisma = new PrismaClient();
+const passwordKeyLength = 64;
+
+function hashPassword(
+  password: string
+) {
+  const salt =
+    randomBytes(16).toString("hex");
+  const hash = scryptSync(
+    password,
+    salt,
+    passwordKeyLength
+  ).toString("hex");
+
+  return `scrypt:${salt}:${hash}`;
+}
+
+function hashApiKey(
+  apiKey: string
+) {
+  return createHash("sha256")
+    .update(apiKey)
+    .digest("hex");
+}
 
 async function main() {
   const adminEmail =
